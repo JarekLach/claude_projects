@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MusicXML Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap');
+
+  :root {
+    --bg: #faf8f5;
+    --surface: #ffffff;
+    --border: #e2ddd7;
+    --text: #2c2825;
+    --text-muted: #8a8078;
+    --accent: #3d5a80;
+    --accent-hover: #2c4560;
+    --score-bg: #fffefa;
+    --shadow: 0 2px 12px rgba(44,40,37,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span {
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  /* Upload area */
+  .upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 48px 32px;
+    transition: opacity 0.3s;
+  }
+
+  .upload-zone.hidden { display: none; }
+
+  .drop-area {
+    width: 100%;
+    max-width: 560px;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 56px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--surface);
+  }
+
+  .drop-area:hover, .drop-area.dragover {
+    border-color: var(--accent);
+    background: rgba(61,90,128,0.04);
+  }
+
+  .drop-icon {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .drop-area h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .drop-area p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .drop-area input[type="file"] { display: none; }
+
+  /* Toolbar */
+  .toolbar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .toolbar.active { display: flex; }
+
+  .toolbar .file-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+  }
+
+  .toolbar .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .toolbar .page-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    gap: 5px;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-icon {
+    padding: 7px 10px;
+    font-size: 1rem;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+
+  /* Score container */
+  .score-wrapper {
+    display: none;
+    flex: 1;
+    overflow: auto;
+    padding: 24px 32px;
+    background: var(--bg);
+  }
+
+  .score-wrapper.active { display: block; }
+
+  #score-container {
+    background: var(--score-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+
+  #score-container svg {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Loading */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(250,248,245,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  /* Error */
+  .error-msg {
+    display: none;
+    background: #fdf0ef;
+    color: #9b3028;
+    border: 1px solid #e8c4c0;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin: 16px 32px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .error-msg.active { display: block; }
+
+  /* Zoom indicator */
+  .zoom-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MusicXML Viewer <span>Verovio</span></div>
+  <button class="btn" id="btn-new" style="display:none" onclick="resetViewer()">Nowy plik</button>
+</header>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Ładowanie Verovio...</div>
+</div>
+
+<div class="error-msg" id="error"></div>
+
+<div class="upload-zone" id="upload-zone">
+  <div class="drop-area" id="drop-area">
+    <div class="drop-icon">&#119070;</div>
+    <h2>Załaduj partyturę</h2>
+    <p>Przeciągnij plik .mxl, .musicxml lub .xml<br>albo kliknij, żeby wybrać</p>
+    <input type="file" id="file-input" accept=".mxl,.musicxml,.xml,.mei">
+  </div>
+</div>
+
+<div class="toolbar" id="toolbar">
+  <span class="file-name" id="file-name"></span>
+  <div class="nav-group">
+    <button class="btn btn-icon" id="btn-zoom-out" title="Pomniejsz">&#8722;</button>
+    <span class="zoom-label" id="zoom-label">100%</span>
+    <button class="btn btn-icon" id="btn-zoom-in" title="Powiększ">&#43;</button>
+  </div>
+  <div class="nav-group">
+    <button class="btn btn-icon" id="btn-prev" title="Poprzednia strona">&#9664;</button>
+    <span class="page-info" id="page-info">1 / 1</span>
+    <button class="btn btn-icon" id="btn-next" title="Następna strona">&#9654;</button>
+  </div>
+</div>
+
+<div class="score-wrapper" id="score-wrapper">
+  <div id="score-container"></div>
+</div>
+
+<script>
+(function() {
+  // State
+  let vrvToolkit = null;
+  let currentPage = 1;
+  let totalPages = 1;
+  let zoomLevel = 100;
+  let verovioReady = false;
+  let currentFileName = '';
+
+  // DOM refs
+  const loading = document.getElementById('loading');
+  const loadingText = document.getElementById('loading-text');
+  const uploadZone = document.getElementById('upload-zone');
+  const dropArea = document.getElementById('drop-area');
+  const fileInput = document.getElementById('file-input');
+  const toolbar = document.getElementById('toolbar');
+  const scoreWrapper = document.getElementById('score-wrapper');
+  const scoreContainer = document.getElementById('score-container');
+  const fileNameEl = document.getElementById('file-name');
+  const pageInfo = document.getElementById('page-info');
+  const zoomLabel = document.getElementById('zoom-label');
+  const errorEl = document.getElementById('error');
+  const btnNew = document.getElementById('btn-new');
+
+  // ---- Load Verovio ----
+  function loadVerovio() {
+    showLoading('Ładowanie biblioteki Verovio...');
+    const script = document.createElement('script');
+    script.src = 'https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js';
+    script.onload = function() {
+      loadingText.textContent = 'Inicjalizacja Verovio...';
+      verovio.module.onRuntimeInitialized = function() {
+        vrvToolkit = new verovio.toolkit();
+        verovioReady = true;
+        hideLoading();
+        console.log('Verovio ready');
+      };
+    };
+    script.onerror = function() {
+      hideLoading();
+      showError('Nie udało się załadować biblioteki Verovio. Sprawdź połączenie z internetem.');
+    };
+    document.head.appendChild(script);
+  }
+
+  // ---- File handling ----
+  dropArea.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  dropArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropArea.classList.add('dragover');
+  });
+  dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+  dropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  async function handleFile(file) {
+    hideError();
+    currentFileName = file.name;
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if (!verovioReady) {
+      showError('Verovio jeszcze się ładuje. Spróbuj za chwilę.');
+      return;
+    }
+
+    showLoading('Wczytywanie partytury...');
+
+    try {
+      let xmlData;
+
+      if (ext === 'mxl') {
+        // Compressed MusicXML - unzip first
+        loadingText.textContent = 'Rozpakowywanie .mxl...';
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+
+        // Find the score XML inside the ZIP
+        let scoreFile = null;
+        // First check META-INF/container.xml for rootfile
+        const containerFile = zip.file('META-INF/container.xml');
+        if (containerFile) {
+          const containerXml = await containerFile.async('string');
+          const parser = new DOMParser();
+          const containerDoc = parser.parseFromString(containerXml, 'text/xml');
+          const rootfile = containerDoc.querySelector('rootfile');
+          if (rootfile) {
+            const fullPath = rootfile.getAttribute('full-path');
+            if (fullPath) scoreFile = zip.file(fullPath);
+          }
+        }
+
+        // Fallback: find first .xml or .musicxml file that's not in META-INF
+        if (!scoreFile) {
+          const files = Object.keys(zip.files);
+          const candidate = files.find(f =>
+            !f.startsWith('META-INF') &&
+            !f.endsWith('/') &&
+            (f.endsWith('.xml') || f.endsWith('.musicxml'))
+          );
+          if (candidate) scoreFile = zip.file(candidate);
+        }
+
+        if (!scoreFile) {
+          throw new Error('Nie znaleziono pliku MusicXML wewnątrz archiwum .mxl');
+        }
+
+        xmlData = await scoreFile.async('string');
+
+      } else {
+        // Plain XML / MusicXML / MEI
+        xmlData = await file.text();
+      }
+
+      loadingText.textContent = 'Renderowanie zapisu nutowego...';
+
+      // Configure Verovio
+      const containerWidth = scoreContainer.clientWidth - 48; // minus padding
+      vrvToolkit.setOptions({
+        pageWidth: Math.max(containerWidth * 100 / zoomLevel, 800),
+        pageHeight: 60000, // let it auto
+        scale: zoomLevel,
+        adjustPageHeight: true,
+        breaks: 'auto',
+        header: 'auto',
+        footer: 'none',
+        spacingStaff: 8,
+        spacingSystem: 12,
+        font: 'Bravura',
+      });
+
+      const success = vrvToolkit.loadData(xmlData);
+      if (!success) {
+        throw new Error('Verovio nie rozpoznało formatu pliku. Upewnij się, że to poprawny plik MusicXML lub MEI.');
+      }
+
+      totalPages = vrvToolkit.getPageCount();
+      currentPage = 1;
+
+      renderPage();
+      showScoreView();
+      hideLoading();
+
+    } catch (err) {
+      hideLoading();
+      showError('Błąd: ' + err.message);
+      console.error(err);
+    }
+  }
+
+  function renderPage() {
+    const svg = vrvToolkit.renderToSVG(currentPage, {});
+    scoreContainer.innerHTML = svg;
+    pageInfo.textContent = currentPage + ' / ' + totalPages;
+    document.getElementById('btn-prev').disabled = (currentPage <= 1);
+    document.getElementById('btn-next').disabled = (currentPage >= totalPages);
+  }
+
+  function reloadScore() {
+    const containerWidth = scoreContainer.clientWidth - 48;
+    vrvToolkit.setOptions({
+      pageWidth: Math.max(containerWidth * 100 / zoomLevel, 800),
+      scale: zoomLevel,
+    });
+    vrvToolkit.redoLayout();
+    totalPages = vrvToolkit.getPageCount();
+    if (currentPage > totalPages) currentPage = totalPages;
+    renderPage();
+  }
+
+  // ---- Navigation ----
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; renderPage(); }
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    if (currentPage < totalPages) { currentPage++; renderPage(); }
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && currentPage > 1) { currentPage--; renderPage(); }
+    if (e.key === 'ArrowRight' && currentPage < totalPages) { currentPage++; renderPage(); }
+    if (e.key === '+' || e.key === '=') { zoomIn(); }
+    if (e.key === '-') { zoomOut(); }
+  });
+
+  // ---- Zoom ----
+  function zoomIn() {
+    if (zoomLevel >= 200) return;
+    zoomLevel += 10;
+    zoomLabel.textContent = zoomLevel + '%';
+    reloadScore();
+  }
+
+  function zoomOut() {
+    if (zoomLevel <= 30) return;
+    zoomLevel -= 10;
+    zoomLabel.textContent = zoomLevel + '%';
+    reloadScore();
+  }
+
+  document.getElementById('btn-zoom-in').addEventListener('click', zoomIn);
+  document.getElementById('btn-zoom-out').addEventListener('click', zoomOut);
+
+  // ---- UI state ----
+  function showScoreView() {
+    uploadZone.classList.add('hidden');
+    toolbar.classList.add('active');
+    scoreWrapper.classList.add('active');
+    btnNew.style.display = '';
+    fileNameEl.textContent = currentFileName;
+    zoomLabel.textContent = zoomLevel + '%';
+  }
+
+  window.resetViewer = function() {
+    uploadZone.classList.remove('hidden');
+    toolbar.classList.remove('active');
+    scoreWrapper.classList.remove('active');
+    btnNew.style.display = 'none';
+    scoreContainer.innerHTML = '';
+    fileInput.value = '';
+    currentPage = 1;
+    totalPages = 1;
+    zoomLevel = 100;
+    hideError();
+  };
+
+  function showLoading(text) {
+    loadingText.textContent = text || 'Ładowanie...';
+    loading.classList.add('active');
+  }
+  function hideLoading() { loading.classList.remove('active'); }
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.classList.add('active');
+  }
+  function hideError() { errorEl.classList.remove('active'); }
+
+  // ---- Responsive resize ----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (verovioReady && vrvToolkit && scoreWrapper.classList.contains('active')) {
+        reloadScore();
+      }
+    }, 300);
+  });
+
+  // ---- Init ----
+  loadVerovio();
+})();
+</script>
+</body>
+</html>

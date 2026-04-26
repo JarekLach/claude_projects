@@ -1,0 +1,35 @@
+{
+  "reviews": [
+    {
+      "run_id": "email-delay-german-with_skill",
+      "feedback": "To jest dobre, chociaż sformułowania mogłyby być mniej wymyślne Zamiast \"..es gibt da eine Sache, die ich dir nicht vorenthalten kann\" Preferowałbym coś mniej skomplikowanego. : \"Wie haben ein Problem\" Prosto z mostu, od razu do rzeczy. \nW miejsce \"..zwei Wochen\" po prostu \"..2 Wochen\" Mniej akapitów. Dołącz następne zdanie do tego akapitu . To jeden wątek: przedstawienie problemu. W kolejnym akapicie propozycja rozwiązania. Poza tym, dobrze. ",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    },
+    {
+      "run_id": "email-delay-german-without_skill",
+      "feedback": "Znowu zbyt dużo akapitów. Połącz pierwszy i drugi. Podoba mi się, że 2 napisane jest cyfrą. Zdania długie, ale w zasadzie uzasadnione. \nZa dużo akapitów. Połączyłbym wstęp i ten akapit razem jako przedstawienie problemu. W kolejnym akapicie: es ist wichtig. Jest wezwanie do działania, akcji, propozycja, co należy robić. To dobrze. \nW osobnym akapicie prośba, zadanie, akcja do wykonania. To dobrze \nPożegnanie uprzejmości „vielen Dank” i „beste Grüße” nie muszą być oddzielone pustą linią całość będzie bardziej zwarta, łatwiejsza do nawigacji wzrokiem \n\n\"Bitte lass mich wissen\" z poprzedni akapit. ",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    },
+    {
+      "run_id": "rejection-english-with_skill",
+      "feedback": "Podoba mi się język.\n\nPodoba mi się struktura.\n\nBullet point wyliczenia skompaktowałbym bez zostawiania całych wolnych linii pomiędzy. Raczej krótkie odstępy za akapitem: 4 6 pt. Do kolejnego punktu listy. \n\nZamknięcie, zaproszenie do kontaktu - dobre. Podobnie, grzecznościowe pożegnanie. Tutaj powinna się znaleźć stopka e-maila, która jest częścią typowego szablonu. \n",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    },
+    {
+      "run_id": "rejection-english-without_skill",
+      "feedback": "To jest dobry projekt. Podoba mi się. We wstępie, w pierwszym akapicie, skróciłbym to nieco. sformułował mniej rozwlekle. \nKolejny akapit wyjaśniający naszą pozycję jest dobry, rzeczowy, zawiera niezbędne detale i nie jest przeładowany . Oceniam go w zasadzie jako równie dobrego jak ten ze skill. Nawet jeśli nie zawiera listy. ",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    },
+    {
+      "run_id": "linkedin-polish-with_skill",
+      "feedback": "To nie jest mój styl. Zdania zbyt krótkie. Jest to próba nadania szybszego pulsu.\n\nPoprzez rezygnację z pełnej struktury zdania: podmiot, orzeczenie. Język wydaje się dla mnie nieco zbyt potoczny , tak bym się zwracał w rozmowie.\n\nTekst powinien mieć nieco staranniejszą formę. Takie staccato zdań informacji jest dla mnie irytujące. Odczuwam w tym zamiar zagrania na emocjach, raczej niż wyjaśnienia czy podzielenia się doświadczeniem. \nZbyt wiele akapitów , zbyt uproszczony język , apele do odbiorcy to również nie mój styl . Nie opublikowałbym takiego wpisu. Do przeredagowania. ",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    },
+    {
+      "run_id": "linkedin-polish-without_skill",
+      "feedback": "Tutaj dzielę się swoim doświadczeniem, więc mówienie w pierwszej osobie od siebie uważam za uzasadnione. Nadaje to wyraźniejszy kontekst.\n\nNie są to ogólnie obowiązujące prawdy, ale moje przemyślenia i doświadczenia. Zwroty i to boli.\n\nZbyt emocjonalne - to nie ten biznes. Znowu zbyt wiele równoważników zdań. To również nie nadaje się do mojego LinkedIn-a. ",
+      "timestamp": "2026-04-02T11:11:45.429Z"
+    }
+  ],
+  "status": "complete"
+}

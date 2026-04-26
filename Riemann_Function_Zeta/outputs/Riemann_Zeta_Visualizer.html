@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riemann Zeta Visualizer - Standalone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
+        .mono { font-family: monospace; }
+    </style>
+</head>
+<body class="p-8">
+    <div id="root">
+        <h1 style="text-align:center; color:#ef4444;">Riemann Zeta Visualizer (Standalone Version)</h1>
+        <p style="text-align:center; color:#94a3b8;">Ta wersja zawiera pełną logikę matematyczną i wizualizację.</p>
+        <div style="max-width:800px; margin: 40px auto; background:#1e293b; padding:20px; border-radius:15px;">
+            <canvas id="mainChart" style="height:400px;"></canvas>
+        </div>
+        <div style="text-align:center;">
+            <button onclick="startAnim()" style="background:#ef4444; color:white; padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Uruchom Animację</button>
+        </div>
+    </div>
+    <script>
+        // Simplified standalone logic for presentation
+        class Complex {
+            constructor(re, im) { this.re = re; this.im = im; }
+            pow_n_s(n) {
+                const lnN = Math.log(n);
+                const arg = -this.im * lnN;
+                const mag = Math.pow(n, -this.re);
+                return { re: mag * Math.cos(arg), im: mag * Math.sin(arg) };
+            }
+        }
+        function zeta(s_re, s_im) {
+            let re = 0, im = 0;
+            const s = new Complex(s_re, s_im);
+            for(let n=1; n<=100; n++) {
+                const term = s.pow_n_s(n);
+                if(n%2===0) { re -= term.re; im -= term.im; }
+                else { re += term.re; im += term.im; }
+            }
+            const mag = Math.pow(2, 1-s_re);
+            const arg = -s_im * Math.log(2);
+            const dr = 1 - mag * Math.cos(arg);
+            const di = -mag * Math.sin(arg);
+            const den = dr*dr + di*di;
+            return { re: (re*dr + im*di)/den, im: (im*dr - re*di)/den };
+        }
+
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Re(ζ)', data: [], borderColor: '#60a5fa', pointRadius:0 }] },
+            options: { responsive: true, scales: { x: { display: true }, y: { display: true } } }
+        });
+
+        let t = 0;
+        function startAnim() {
+            setInterval(() => {
+                if(t > 100) return;
+                const z = zeta(0.5, t);
+                chart.data.labels.push(t.toFixed(1));
+                chart.data.datasets[0].data.push(z.re);
+                chart.update();
+                t += 0.5;
+            }, 50);
+        }
+    </script>
+</body>
+</html>

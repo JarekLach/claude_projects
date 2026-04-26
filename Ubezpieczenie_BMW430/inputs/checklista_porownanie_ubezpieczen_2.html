@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklista — Porównanie ubezpieczeń MF Szwajcaria</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f5f0;
+  --card: #ffffff;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --accent: #0055b8;
+  --accent-light: #e8f0fb;
+  --border: #e0ddd6;
+  --green: #2a7d4f;
+  --green-light: #eaf5ef;
+  --red: #c0392b;
+  --red-light: #fbeaea;
+  --orange: #d4760a;
+  --orange-light: #fef5e7;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; padding: 2rem 1rem; }
+.container { max-width: 820px; margin: 0 auto; }
+h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+.subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.card h2 .num { background: var(--accent); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.field-row:last-child { border-bottom: none; }
+.field-label { color: var(--muted); font-size: 0.88rem; }
+.field-value { font-family: 'DM Mono', monospace; font-size: 0.88rem; font-weight: 500; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+.tag-green { background: var(--green-light); color: var(--green); }
+.tag-red { background: var(--red-light); color: var(--red); }
+.tag-orange { background: var(--orange-light); color: var(--orange); }
+.tag-blue { background: var(--accent-light); color: var(--accent); }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.75rem; }
+.compare-table th { text-align: left; padding: 0.5rem 0.75rem; background: var(--bg); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.compare-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+.compare-table .col-label { color: var(--muted); }
+.compare-table .col-tk { font-family: 'DM Mono', monospace; font-weight: 500; }
+.compare-table .col-vk { font-family: 'DM Mono', monospace; font-weight: 500; }
+.compare-table tr:last-child td { border-bottom: none; font-weight: 700; }
+.note { background: var(--orange-light); border-left: 3px solid var(--orange); padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; font-size: 0.88rem; margin-top: 0.75rem; }
+.links { margin-top: 0.75rem; }
+.links a { display: inline-block; background: var(--accent); color: white; text-decoration: none; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 500; font-size: 0.9rem; margin-right: 0.5rem; margin-bottom: 0.5rem; transition: opacity 0.2s; }
+.links a:hover { opacity: 0.85; }
+.checklist-item { display: flex; gap: 0.5rem; padding: 0.4rem 0; font-size: 0.9rem; align-items: flex-start; }
+.checklist-item::before { content: "☐"; flex-shrink: 0; font-size: 1rem; }
+.section-note { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+@media print {
+  body { padding: 0; background: white; }
+  .card { break-inside: avoid; border: 1px solid #ccc; }
+  .links a { color: var(--accent); background: none; border: 1px solid var(--accent); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Checklista do porównania ubezpieczeń MF</h1>
+<p class="subtitle">BMW 430d Gran Coupé xDrive — comparis.ch / bonus.ch / moneyland.ch</p>
+
+<!-- SECTION 1: Vehicle data -->
+<div class="card">
+  <h2><span class="num">1</span> Dane pojazdu (Fahrzeugangaben)</h2>
+  <div class="field-row"><span class="field-label">Stammnummer</span><span class="field-value">651377547</span></div>
+  <div class="field-row"><span class="field-label">Marke / Modell</span><span class="field-value">BMW 430d Gran Coupé xDrive Lu</span></div>
+  <div class="field-row"><span class="field-label">Kanton / Kontrollschild</span><span class="field-value">AG (Aargau)</span></div>
+  <div class="field-row"><span class="field-label">1. Inverkehrsetzung</span><span class="field-value">03.2017</span></div>
+  <div class="field-row"><span class="field-label">Kaufjahr</span><span class="field-value">2026</span></div>
+  <div class="field-row"><span class="field-label">Fahrzeugart</span><span class="field-value">Personenwagen</span></div>
+  <div class="field-row"><span class="field-label">Motor</span><span class="field-value">Diesel / 2'993 ccm / 258 PS</span></div>
+  <div class="field-row"><span class="field-label">Katalogpreis (inkl. MwSt.)</span><span class="field-value">CHF 68'000</span></div>
+  <div class="field-row"><span class="field-label">Zusatzausrüstungen</span><span class="field-value">CHF 20'000</span></div>
+  <div class="field-row"><span class="field-label">Aktueller Fahrzeugwert</span><span class="field-value tag tag-orange">ca. CHF 22'000</span></div>
+  <div class="field-row"><span class="field-label">Kilometer pro Jahr</span><span class="field-value">bis 10'000</span></div>
+  <div class="field-row"><span class="field-label">Leasing</span><span class="field-value">Nein</span></div>
+  <div class="field-row"><span class="field-label">Spezielle Nutzung</span><span class="field-value">Nein</span></div>
+  <div class="field-row"><span class="field-label">Garage über Nacht</span><span class="field-value">Ja (Einzel-/Tiefgarage)</span></div>
+  <div class="field-row"><span class="field-label">Sitzplätze</span><span class="field-value">5</span></div>
+</div>
+
+<!-- SECTION 2: Driver data -->
+<div class="card">
+  <h2><span class="num">2</span> Dane kierowcy (Lenkerangaben)</h2>
+  <div class="field-row"><span class="field-label">Häufigste Lenkerin</span><span class="field-value">Anna Starkowska-Lach</span></div>
+  <div class="field-row"><span class="field-label">Adresse</span><span class="field-value">Surbtalstrasse 26 C, 5312 Döttingen</span></div>
+  <div class="field-row"><span class="field-label">Geburtsdatum</span><span class="field-value">17.04.1964</span></div>
+  <div class="field-row"><span class="field-label">Geschlecht</span><span class="field-value">weiblich</span></div>
+  <div class="field-row"><span class="field-label">Nationalität</span><span class="field-value">Schweiz</span></div>
+  <div class="field-row"><span class="field-label">Personen unter 25 J.</span><span class="field-value">Nein</span></div>
+</div>
+
+<!-- SECTION 3: Insurance history -->
+<div class="card">
+  <h2><span class="num">3</span> Historia ubezpieczeniowa (Vorversicherung)</h2>
+  <div class="field-row"><span class="field-label">Vorversicherer</span><span class="field-value">AXA</span></div>
+  <div class="field-row"><span class="field-label">Schadenfreiheitsstufe</span><span class="field-value">30 % (najniższa = najlepsza)</span></div>
+  <div class="field-row"><span class="field-label">Schäden letzte 5 Jahre</span><span class="field-value">Keine</span></div>
+  <div class="field-row"><span class="field-label">Ausweisentzug > 2 Mt.</span><span class="field-value">Nein</span></div>
+  <div class="field-row"><span class="field-label">Police gekündigt / Auflagen</span><span class="field-value">Nein</span></div>
+</div>
+
+<!-- SECTION 4: Coverage to compare -->
+<div class="card">
+  <h2><span class="num">4</span> Zakres do porównania — zaznacz identyczne opcje</h2>
+  <p class="section-note" style="margin-bottom:1rem;">Aby porównanie było miarodajne, zaznacz w porównywarce te same opcje co w ofercie AXA. Poniżej zestawienie obu wariantów.</p>
+
+  <table class="compare-table">
+    <thead>
+      <tr><th>Leistung</th><th>Teilkasko</th><th>Vollkasko</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="col-label">Haftpflicht (obligatorisch)</td><td class="col-tk"><span class="tag tag-green">✓</span></td><td class="col-vk"><span class="tag tag-green">✓</span></td></tr>
+      <tr><td class="col-label">Schäden an Ihrem Eigentum</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Kollision (Schäden durch Sie selbst)</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-green">✓</span> SB 1'000</td></tr>
+      <tr><td class="col-label">Teilkasko (Natur, Tiere, Diebstahl…)</td><td class="col-tk"><span class="tag tag-green">✓</span> SB 0*</td><td class="col-vk"><span class="tag tag-green">✓</span> SB 0*</td></tr>
+      <tr><td class="col-label">Scheinwerfer & Seitenspiegel</td><td class="col-tk"><span class="tag tag-green">✓</span> SB 0*</td><td class="col-vk"><span class="tag tag-green">✓</span> SB 0*</td></tr>
+      <tr><td class="col-label">Parkschäden</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Fahrzeug-Innenraum</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Pneus & Felgen</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Mitgeführte Sachen</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Fahrzeugschlüssel</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Grobfahrlässigkeit</td><td class="col-tk"><span class="tag tag-green">✓</span></td><td class="col-vk"><span class="tag tag-green">✓</span></td></tr>
+      <tr><td class="col-label">Bonusschutz (1 Schaden/Jahr)</td><td class="col-tk"><span class="tag tag-green">✓</span></td><td class="col-vk"><span class="tag tag-green">✓</span></td></tr>
+      <tr><td class="col-label">Pannenhilfe inkl. Weiterfahrt (Europa)</td><td class="col-tk"><span class="tag tag-green">✓</span></td><td class="col-vk"><span class="tag tag-green">✓</span></td></tr>
+      <tr><td class="col-label">Ersatzfahrzeug</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Fahrzeug-Rechtsschutz</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+      <tr><td class="col-label">Insassenunfall</td><td class="col-tk"><span class="tag tag-red">✗</span></td><td class="col-vk"><span class="tag tag-red">✗</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">* SB 0 z Reparaturbonus Glasbruch — przy wyborze nieautoryzowanego warsztatu SB rośnie o CHF 500.</div>
+</div>
+
+<!-- SECTION 5: AXA reference premiums -->
+<div class="card">
+  <h2><span class="num">5</span> Składki referencyjne AXA (do porównania)</h2>
+  <table class="compare-table">
+    <thead>
+      <tr><th>Pozycja</th><th>Teilkasko</th><th>Vollkasko</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="col-label">Haftpflicht</td><td class="col-tk">472.20</td><td class="col-vk">433.20</td></tr>
+      <tr><td class="col-label">Kasko (Teil / Voll)</td><td class="col-tk">478.31</td><td class="col-vk">910.43</td></tr>
+      <tr><td class="col-label">Services & Zusatzleistungen</td><td class="col-tk">148.39</td><td class="col-vk">261.35</td></tr>
+      <tr><td class="col-label">Gesetzliche Abgaben</td><td class="col-tk">63.37</td><td class="col-vk">88.31</td></tr>
+      <tr><td class="col-label">Total Jahresprämie</td><td class="col-tk" style="color:var(--accent)">CHF 1'162.27</td><td class="col-vk" style="color:var(--accent)">CHF 1'693.29</td></tr>
+    </tbody>
+  </table>
+  <p class="section-note" style="margin-top:0.75rem">Uwzględnione rabaty: Laufzeitrabatt 3% (umowa 3-letnia do 30.06.2029), Reparaturbonus Glasbruch, rabaty z tytułu innych polis AXA (motocykl + pierwszy samochód).</p>
+</div>
+
+<!-- SECTION 6: Links -->
+<div class="card">
+  <h2><span class="num">6</span> Linki do porównywarek</h2>
+  <div class="links">
+    <a href="https://www.comparis.ch/autoversicherung/berechnen" target="_blank">comparis.ch</a>
+    <a href="https://www.bonus.ch/Autoversicherung.aspx" target="_blank">bonus.ch</a>
+    <a href="https://www.moneyland.ch/de/autoversicherung-vergleich" target="_blank">moneyland.ch</a>
+  </div>
+  <p class="section-note" style="margin-top:1rem">Wystarczy wpisać Stammnummer (651377547) — porównywarki automatycznie zaciągną dane techniczne pojazdu. Uzupełnij tylko dane kierowcy, historię szkód i pożądany zakres ochrony.</p>
+</div>
+
+<!-- SECTION 7: What to compare -->
+<div class="card">
+  <h2><span class="num">7</span> Na co zwrócić uwagę przy porównywaniu wyników</h2>
+  <div class="checklist-item">Porównuj łączne składki roczne (brutto, z opłatami) — nie netto.</div>
+  <div class="checklist-item">Sprawdź Selbstbehalt (udział własny) — niższa składka może oznaczać wyższy SB.</div>
+  <div class="checklist-item">Schadenfreiheitsstufe — czy konkurent uznaje 30% z AXA? (Zwykle tak, ale potwierdź.)</div>
+  <div class="checklist-item">Zeitwert vs. Kaufpreisgarantie — jak wyceniane jest auto przy Totalschaden?</div>
+  <div class="checklist-item">Bonusschutz — czy jest w cenie, czy osobna opcja? Ile kosztuje?</div>
+  <div class="checklist-item">Grobfahrlässigkeit — koniecznie uwzględnij; bez tego ubezpieczyciel może zmniejszyć świadczenie.</div>
+  <div class="checklist-item">Pannenhilfe — czy zakres Europa, czy tylko Szwajcaria? Jaki limit na zdarzenie?</div>
+  <div class="checklist-item">Reparaturbonus / ograniczenia wyboru warsztatu — jakie warunki?</div>
+  <div class="checklist-item">Bündelungsrabatt — zapytaj o rabat wielopolisowy (motocykl + 2 auta). AXA go już uwzględnia.</div>
+  <div class="checklist-item">Laufzeit — umowa 1-roczna czy 3-letnia? Rabat za dłuższą umowę?</div>
+</div>
+
+</div>
+</body>
+</html>

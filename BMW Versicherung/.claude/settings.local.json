@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/jarek/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/4a9c1314-01da-4c4c-9892-43dfad487feb/d99b4c53-8bde-4300-950b-9fac9bd5bb0b/skills/docx/**)",
+      "Bash(npm list *)",
+      "Bash(node -e \"require\\('docx'\\); console.log\\('docx available'\\)\")",
+      "Bash(npm install *)"
+    ]
+  }
+}

@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MusicXML Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap');
+
+  :root {
+    --bg: #faf8f5;
+    --surface: #ffffff;
+    --border: #e2ddd7;
+    --text: #2c2825;
+    --text-muted: #8a8078;
+    --accent: #3d5a80;
+    --accent-hover: #2c4560;
+    --accent-light: rgba(61,90,128,0.12);
+    --highlight: #e07840;
+    --highlight-glow: rgba(224,120,64,0.25);
+    --score-bg: #fffefa;
+    --shadow: 0 2px 12px rgba(44,40,37,0.08);
+    --progress-bg: #e2ddd7;
+    --progress-fill: var(--accent);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === HEADER === */
+  header {
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span {
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* === UPLOAD ZONE === */
+  .upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 48px 32px;
+    transition: opacity 0.3s;
+  }
+
+  .upload-zone.hidden { display: none; }
+
+  .drop-area {
+    width: 100%;
+    max-width: 560px;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 56px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--surface);
+  }
+
+  .drop-area:hover, .drop-area.dragover {
+    border-color: var(--accent);
+    background: rgba(61,90,128,0.04);
+  }
+
+  .drop-icon { font-size: 2.5rem; margin-bottom: 16px; opacity: 0.5; }
+
+  .drop-area h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .drop-area p { color: var(--text-muted); font-size: 0.875rem; line-height: 1.5; }
+  .drop-area input[type="file"] { display: none; }
+
+  /* === TOOLBAR === */
+  .toolbar-container {
+    display: none;
+    flex-direction: column;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toolbar-container.active { display: flex; }
+
+  .toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 32px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-row + .toolbar-row { border-top: 1px solid var(--border); padding-top: 10px; }
+
+  .toolbar-row .file-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+  }
+
+  .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .nav-group .separator {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 6px;
+  }
+
+  .page-info, .zoom-label, .tempo-label, .time-display {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: center;
+    user-select: none;
+  }
+
+  .page-info { min-width: 70px; }
+  .tempo-label { min-width: 60px; }
+  .time-display { min-width: 80px; font-variant-numeric: tabular-nums; }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn:disabled:hover { border-color: var(--border); color: var(--text); }
+
+  .btn-icon { padding: 6px 9px; font-size: 1rem; }
+
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+
+  .btn-play { min-width: 38px; font-size: 1.1rem; }
+  .btn-play.playing { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  /* === PROGRESS BAR === */
+  .progress-container {
+    flex: 1;
+    min-width: 120px;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: height 0.1s;
+  }
+
+  .progress-container:hover { height: 10px; }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--progress-fill);
+    border-radius: 3px;
+    width: 0%;
+    transition: none;
+    pointer-events: none;
+  }
+
+  /* === RANGE SLIDERS === */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .slider-tempo { width: 90px; }
+  .slider-volume { width: 60px; }
+
+  /* === SCORE === */
+  .score-wrapper {
+    display: none;
+    flex: 1;
+    overflow: auto;
+    padding: 24px 32px;
+    background: var(--bg);
+  }
+
+  .score-wrapper.active { display: block; }
+
+  #score-container {
+    background: var(--score-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #score-container svg { width: 100%; height: auto; }
+
+  /* === NOTE HIGHLIGHTING === */
+  #score-container .note-active,
+  #score-container .note-active path,
+  #score-container .note-active rect {
+    fill: var(--highlight) !important;
+    transition: fill 0.06s ease;
+  }
+
+  /* === LOADING === */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(250,248,245,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 0.9rem; color: var(--text-muted); }
+
+  /* === ERROR === */
+  .error-msg {
+    display: none;
+    background: #fdf0ef;
+    color: #9b3028;
+    border: 1px solid #e8c4c0;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin: 16px 32px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .error-msg.active { display: block; }
+
+  /* === EXPORT MENU === */
+  .export-dropdown {
+    position: relative;
+  }
+
+  .export-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    min-width: 150px;
+    z-index: 50;
+    overflow: hidden;
+  }
+
+  .export-menu.open { display: block; }
+
+  .export-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .export-menu button:hover { background: var(--accent-light); }
+  .export-menu button + button { border-top: 1px solid var(--border); }
+
+  /* === TOOLTIP === */
+  .status-msg {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: var(--surface);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .status-msg.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MusicXML Viewer <span>Verovio + SoundFont</span></div>
+  <div class="header-actions">
+    <button class="btn" id="btn-new" style="display:none" onclick="resetViewer()">Nowy plik</button>
+  </div>
+</header>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Ładowanie Verovio...</div>
+</div>
+
+<div class="error-msg" id="error"></div>
+
+<div class="upload-zone" id="upload-zone">
+  <div class="drop-area" id="drop-area">
+    <div class="drop-icon">&#119070;</div>
+    <h2>Załaduj partyturę</h2>
+    <p>Przeciągnij plik .mxl, .musicxml lub .xml<br>albo kliknij, żeby wybrać</p>
+    <input type="file" id="file-input" accept=".mxl,.musicxml,.xml,.mei">
+  </div>
+</div>
+
+<!-- Toolbar: Row 1 = file + zoom + pages, Row 2 = playback + tempo + export -->
+<div class="toolbar-container" id="toolbar-container">
+  <div class="toolbar-row">
+    <span class="file-name" id="file-name"></span>
+    <div class="nav-group">
+      <button class="btn btn-icon" id="btn-zoom-out" title="Pomniejsz">&#8722;</button>
+      <span class="zoom-label" id="zoom-label">100%</span>
+      <button class="btn btn-icon" id="btn-zoom-in" title="Powiększ">&#43;</button>
+    </div>
+    <div class="nav-group">
+      <button class="btn btn-icon" id="btn-prev" title="Poprzednia strona">&#9664;</button>
+      <span class="page-info" id="page-info">1 / 1</span>
+      <button class="btn btn-icon" id="btn-next" title="Następna strona">&#9654;</button>
+    </div>
+  </div>
+  <div class="toolbar-row">
+    <div class="nav-group">
+      <button class="btn btn-play" id="btn-play" title="Odtwórz / Pauza" disabled>&#9654;</button>
+      <button class="btn btn-icon" id="btn-stop" title="Stop" disabled>&#9632;</button>
+    </div>
+    <span class="time-display" id="time-display">0:00 / 0:00</span>
+    <div class="progress-container" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="nav-group">
+      <span style="font-size:0.75rem;color:var(--text-muted)">Tempo</span>
+      <input type="range" class="slider-tempo" id="slider-tempo" min="20" max="300" value="88">
+      <span class="tempo-label" id="tempo-label">88 BPM</span>
+    </div>
+    <div class="separator" style="width:1px;height:22px;background:var(--border);margin:0 2px"></div>
+    <div class="nav-group">
+      <span style="font-size:0.9rem;color:var(--text-muted)" title="Głośność">&#128264;</span>
+      <input type="range" class="slider-volume" id="slider-volume" min="0" max="100" value="80">
+    </div>
+    <div class="separator" style="width:1px;height:22px;background:var(--border);margin:0 2px"></div>
+    <div class="export-dropdown" id="export-dropdown">
+      <button class="btn" id="btn-export">Eksport &#9662;</button>
+      <div class="export-menu" id="export-menu">
+        <button onclick="doExport('svg')">SVG (bieżąca strona)</button>
+        <button onclick="doExport('midi')">MIDI</button>
+        <button onclick="doExport('pdf')">PDF (wszystkie strony)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="score-wrapper" id="score-wrapper">
+  <div id="score-container"></div>
+</div>
+
+<div class="status-msg" id="status-msg"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============================================================
+  //  GENERAL MIDI INSTRUMENT NAMES (for soundfont-player)
+  // ============================================================
+  const GM_INSTRUMENTS = [
+    'acoustic_grand_piano','bright_acoustic_piano','electric_grand_piano','honkytonk_piano',
+    'electric_piano_1','electric_piano_2','harpsichord','clavinet',
+    'celesta','glockenspiel','music_box','vibraphone',
+    'marimba','xylophone','tubular_bells','dulcimer',
+    'drawbar_organ','percussive_organ','rock_organ','church_organ',
+    'reed_organ','accordion','harmonica','tango_accordion',
+    'acoustic_guitar_nylon','acoustic_guitar_steel','electric_guitar_jazz','electric_guitar_clean',
+    'electric_guitar_muted','overdriven_guitar','distortion_guitar','guitar_harmonics',
+    'acoustic_bass','electric_bass_finger','electric_bass_pick','fretless_bass',
+    'slap_bass_1','slap_bass_2','synth_bass_1','synth_bass_2',
+    'violin','viola','cello','contrabass',
+    'tremolo_strings','pizzicato_strings','orchestral_harp','timpani',
+    'string_ensemble_1','string_ensemble_2','synth_strings_1','synth_strings_2',
+    'choir_aahs','voice_oohs','synth_choir','orchestra_hit',
+    'trumpet','trombone','tuba','muted_trumpet',
+    'french_horn','brass_section','synth_brass_1','synth_brass_2',
+    'soprano_sax','alto_sax','tenor_sax','baritone_sax',
+    'oboe','english_horn','bassoon','clarinet',
+    'piccolo','flute','recorder','pan_flute',
+    'blown_bottle','shakuhachi','whistle','ocarina',
+    'lead_1_square','lead_2_sawtooth','lead_3_calliope','lead_4_chiff',
+    'lead_5_charang','lead_6_voice','lead_7_fifths','lead_8_bass_lead',
+    'pad_1_new_age','pad_2_warm','pad_3_polysynth','pad_4_choir',
+    'pad_5_bowed','pad_6_metallic','pad_7_halo','pad_8_sweep',
+    'fx_1_rain','fx_2_soundtrack','fx_3_crystal','fx_4_atmosphere',
+    'fx_5_brightness','fx_6_goblins','fx_7_echoes','fx_8_scifi',
+    'sitar','banjo','shamisen','koto',
+    'kalimba','bagpipe','fiddle','shanai',
+    'tinkle_bell','agogo','steel_drums','woodblock',
+    'taiko_drum','melodic_tom','synth_drum','reverse_cymbal',
+    'guitar_fret_noise','breath_noise','seashore','bird_tweet',
+    'telephone_ring','helicopter','applause','gunshot'
+  ];
+
+  // ============================================================
+  //  MINIMAL MIDI PARSER
+  // ============================================================
+  class MidiParser {
+    parse(uint8Array) {
+      this.data = uint8Array;
+      this.pos = 0;
+
+      // Header chunk
+      const hdrId = this.readString(4);
+      if (hdrId !== 'MThd') throw new Error('Nieprawidłowy plik MIDI');
+      const hdrLen = this.readUint32();
+      const format = this.readUint16();
+      const numTracks = this.readUint16();
+      const timeDivision = this.readUint16();
+
+      const ticksPerQuarter = (timeDivision & 0x8000) === 0 ? timeDivision : 480;
+
+      const tracks = [];
+      for (let t = 0; t < numTracks; t++) {
+        const trkId = this.readString(4);
+        const trkLen = this.readUint32();
+        const trkEnd = this.pos + trkLen;
+        tracks.push(this.parseTrack(trkEnd));
+        this.pos = trkEnd; // ensure we're at track end
+      }
+
+      // Build tempo map from all tracks
+      const tempoMap = [];
+      for (const trk of tracks) {
+        for (const ev of trk) {
+          if (ev.type === 'tempo') tempoMap.push(ev);
+        }
+      }
+      tempoMap.sort((a, b) => a.tick - b.tick);
+      if (tempoMap.length === 0) tempoMap.push({ tick: 0, bpm: 120, uspq: 500000 });
+
+      // Convert ticks to seconds for all note events
+      const allNotes = [];
+      for (const trk of tracks) {
+        const noteOns = {}; // key: channel-note
+        for (const ev of trk) {
+          if (ev.type === 'noteOn') {
+            const key = ev.channel + '-' + ev.note;
+            noteOns[key] = ev;
+          } else if (ev.type === 'noteOff') {
+            const key = ev.channel + '-' + ev.note;
+            const on = noteOns[key];
+            if (on) {
+              allNotes.push({
+                midi: ev.note,
+                channel: ev.channel,
+                program: ev.program || 0,
+                velocity: on.velocity,
+                tickOn: on.tick,
+                tickOff: ev.tick,
+              });
+              delete noteOns[key];
+            }
+          }
+        }
+      }
+
+      // Tick → seconds conversion using tempo map
+      const tickToSec = (tick) => {
+        let sec = 0;
+        let lastTick = 0;
+        let uspq = tempoMap[0].uspq;
+        for (const t of tempoMap) {
+          if (t.tick >= tick) break;
+          sec += (t.tick - lastTick) * uspq / (ticksPerQuarter * 1000000);
+          lastTick = t.tick;
+          uspq = t.uspq;
+        }
+        sec += (tick - lastTick) * uspq / (ticksPerQuarter * 1000000);
+        return sec;
+      };
+
+      for (const n of allNotes) {
+        n.time = tickToSec(n.tickOn);
+        n.duration = tickToSec(n.tickOff) - n.time;
+      }
+
+      allNotes.sort((a, b) => a.time - b.time);
+
+      const totalDuration = allNotes.length > 0
+        ? Math.max(...allNotes.map(n => n.time + n.duration))
+        : 0;
+
+      return {
+        format,
+        ticksPerQuarter,
+        tempoMap,
+        notes: allNotes,
+        totalDuration,
+        baseBpm: tempoMap[0].bpm,
+      };
+    }
+
+    parseTrack(endPos) {
+      const events = [];
+      let tick = 0;
+      let runningStatus = 0;
+      let currentProgram = {}; // per channel
+
+      while (this.pos < endPos) {
+        const delta = this.readVarLen();
+        tick += delta;
+
+        let statusByte = this.data[this.pos];
+
+        if (statusByte >= 0x80) {
+          this.pos++;
+          runningStatus = statusByte;
+        } else {
+          statusByte = runningStatus;
+        }
+
+        const type = statusByte & 0xF0;
+        const channel = statusByte & 0x0F;
+
+        if (type === 0x90) { // Note On
+          const note = this.data[this.pos++];
+          const vel = this.data[this.pos++];
+          if (vel === 0) {
+            events.push({ type: 'noteOff', tick, channel, note, program: currentProgram[channel] || 0 });
+          } else {
+            events.push({ type: 'noteOn', tick, channel, note, velocity: vel, program: currentProgram[channel] || 0 });
+          }
+        } else if (type === 0x80) { // Note Off
+          const note = this.data[this.pos++];
+          this.pos++; // velocity
+          events.push({ type: 'noteOff', tick, channel, note, program: currentProgram[channel] || 0 });
+        } else if (type === 0xC0) { // Program Change
+          const prog = this.data[this.pos++];
+          currentProgram[channel] = prog;
+          events.push({ type: 'programChange', tick, channel, program: prog });
+        } else if (type === 0xB0) { // Control Change
+          this.pos += 2;
+        } else if (type === 0xE0) { // Pitch Bend
+          this.pos += 2;
+        } else if (type === 0xD0) { // Channel Pressure
+          this.pos++;
+        } else if (type === 0xA0) { // Poly Aftertouch
+          this.pos += 2;
+        } else if (statusByte === 0xFF) { // Meta event
+          const metaType = this.data[this.pos++];
+          const len = this.readVarLen();
+          if (metaType === 0x51 && len === 3) { // Tempo
+            const uspq = (this.data[this.pos] << 16) | (this.data[this.pos + 1] << 8) | this.data[this.pos + 2];
+            events.push({ type: 'tempo', tick, uspq, bpm: Math.round(60000000 / uspq) });
+          }
+          this.pos += len;
+        } else if (statusByte === 0xF0 || statusByte === 0xF7) { // SysEx
+          const len = this.readVarLen();
+          this.pos += len;
+        } else {
+          // Unknown — skip to avoid infinite loop
+          break;
+        }
+      }
+
+      // Propagate program info to noteOn events
+      return events;
+    }
+
+    readString(n) {
+      let s = '';
+      for (let i = 0; i < n; i++) s += String.fromCharCode(this.data[this.pos++]);
+      return s;
+    }
+
+    readUint32() {
+      const v = (this.data[this.pos] << 24) | (this.data[this.pos+1] << 16) |
+                (this.data[this.pos+2] << 8) | this.data[this.pos+3];
+      this.pos += 4;
+      return v >>> 0;
+    }
+
+    readUint16() {
+      const v = (this.data[this.pos] << 8) | this.data[this.pos+1];
+      this.pos += 2;
+      return v;
+    }
+
+    readVarLen() {
+      let val = 0;
+      let byte;
+      do {
+        byte = this.data[this.pos++];
+        val = (val << 7) | (byte & 0x7F);
+      } while (byte & 0x80);
+      return val;
+    }
+  }
+
+  // ============================================================
+  //  PLAYBACK ENGINE (SoundFont + Web Audio API)
+  // ============================================================
+  class PlaybackEngine {
+    constructor() {
+      this.audioCtx = null;
+      this.gainNode = null;
+      this.instruments = {};   // program -> soundfont-player instrument
+      this.midiData = null;
+      this.isPlaying = false;
+      this.isPaused = false;
+      this.startTime = 0;      // AudioContext time when playback started
+      this.pauseOffset = 0;    // seconds into the piece when paused
+      this.tempoScale = 1.0;
+      this.volume = 0.8;
+      this.scheduledNodes = [];
+      this.scheduleTimer = null;
+      this.highlightTimer = null;
+      this.nextNoteIdx = 0;
+      this.onProgress = null;  // callback(currentSec, totalSec)
+      this.onEnd = null;
+      this.onPageChange = null;
+      this.loadingInstruments = false;
+    }
+
+    async init() {
+      if (!this.audioCtx) {
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.gainNode = this.audioCtx.createGain();
+        this.gainNode.gain.value = this.volume;
+        this.gainNode.connect(this.audioCtx.destination);
+      }
+      if (this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume();
+      }
+    }
+
+    setVolume(v) {
+      this.volume = v;
+      if (this.gainNode) this.gainNode.gain.value = v;
+    }
+
+    setTempoScale(scale) {
+      if (this.isPlaying && !this.isPaused) {
+        // Save current position, then restart with new tempo
+        const elapsed = this.audioCtx.currentTime - this.startTime;
+        this.pauseOffset = elapsed / this.tempoScale * scale; // adjust
+        // Actually recalculate: current original time
+        const origTime = elapsed / this.tempoScale; // seconds in original tempo
+        this.tempoScale = scale;
+        this.pauseOffset = origTime; // store as original time
+        this.stopScheduling();
+        this.startScheduling();
+      } else {
+        // If paused, pauseOffset is in original time
+        this.tempoScale = scale;
+      }
+    }
+
+    async loadMidi(midiData) {
+      this.midiData = midiData;
+      await this.init();
+
+      // Determine which instruments to load
+      const programs = new Set();
+      for (const n of midiData.notes) {
+        programs.add(n.program || 0);
+      }
+
+      this.loadingInstruments = true;
+      const promises = [];
+      for (const prog of programs) {
+        if (!this.instruments[prog]) {
+          const name = GM_INSTRUMENTS[prog] || 'acoustic_grand_piano';
+          promises.push(
+            Soundfont.instrument(this.audioCtx, name, {
+              soundfont: 'MusyngKite',
+              destination: this.gainNode,
+            }).then(inst => {
+              this.instruments[prog] = inst;
+            }).catch(err => {
+              console.warn('Nie udało się załadować instrumentu:', name, err);
+              // Fallback to piano
+              if (!this.instruments[0]) {
+                return Soundfont.instrument(this.audioCtx, 'acoustic_grand_piano', {
+                  soundfont: 'MusyngKite',
+                  destination: this.gainNode,
+                }).then(inst => {
+                  this.instruments[0] = inst;
+                  this.instruments[prog] = inst;
+                });
+              } else {
+                this.instruments[prog] = this.instruments[0];
+              }
+            })
+          );
+        }
+      }
+      await Promise.all(promises);
+      this.loadingInstruments = false;
+    }
+
+    play() {
+      if (!this.midiData || this.loadingInstruments) return;
+      if (this.isPaused) {
+        this.resume();
+        return;
+      }
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.startTime = this.audioCtx.currentTime;
+      this.nextNoteIdx = 0;
+
+      // If resuming from a position
+      if (this.pauseOffset > 0) {
+        this.startTime -= this.pauseOffset * this.tempoScale;
+        // Find the next note index after pauseOffset
+        this.nextNoteIdx = this.midiData.notes.findIndex(n => n.time >= this.pauseOffset);
+        if (this.nextNoteIdx < 0) this.nextNoteIdx = this.midiData.notes.length;
+      }
+
+      this.startScheduling();
+    }
+
+    pause() {
+      if (!this.isPlaying) return;
+      const elapsed = this.audioCtx.currentTime - this.startTime;
+      this.pauseOffset = elapsed / this.tempoScale; // original time
+      this.isPaused = true;
+      this.isPlaying = false;
+      this.stopScheduling();
+      this.stopAllNotes();
+    }
+
+    resume() {
+      this.isPlaying = true;
+      this.isPaused = false;
+      this.startTime = this.audioCtx.currentTime - this.pauseOffset * this.tempoScale;
+      // Find next note
+      this.nextNoteIdx = this.midiData.notes.findIndex(n => n.time >= this.pauseOffset);
+      if (this.nextNoteIdx < 0) this.nextNoteIdx = this.midiData.notes.length;
+      this.startScheduling();
+    }
+
+    stop() {
+      this.isPlaying = false;
+      this.isPaused = false;
+      this.pauseOffset = 0;
+      this.nextNoteIdx = 0;
+      this.stopScheduling();
+      this.stopAllNotes();
+      if (this.onProgress) this.onProgress(0, this.midiData ? this.midiData.totalDuration : 0);
+    }
+
+    seekTo(fraction) {
+      // fraction 0..1
+      if (!this.midiData) return;
+      const targetOrigTime = fraction * this.midiData.totalDuration;
+      this.pauseOffset = targetOrigTime;
+      if (this.isPlaying) {
+        this.stopScheduling();
+        this.stopAllNotes();
+        this.startTime = this.audioCtx.currentTime - targetOrigTime * this.tempoScale;
+        this.nextNoteIdx = this.midiData.notes.findIndex(n => n.time >= targetOrigTime);
+        if (this.nextNoteIdx < 0) this.nextNoteIdx = this.midiData.notes.length;
+        this.startScheduling();
+      } else {
+        if (this.onProgress) this.onProgress(targetOrigTime, this.midiData.totalDuration);
+      }
+    }
+
+    startScheduling() {
+      const LOOKAHEAD = 0.4; // seconds
+      const INTERVAL = 50;   // ms
+
+      this.scheduleTimer = setInterval(() => {
+        if (!this.isPlaying || !this.midiData) return;
+
+        const now = this.audioCtx.currentTime;
+        const elapsedScaled = now - this.startTime;
+        const elapsedOrig = elapsedScaled / this.tempoScale;
+        const lookAheadOrig = LOOKAHEAD / this.tempoScale;
+
+        // Schedule upcoming notes
+        while (this.nextNoteIdx < this.midiData.notes.length) {
+          const note = this.midiData.notes[this.nextNoteIdx];
+          if (note.time > elapsedOrig + lookAheadOrig) break;
+
+          const scaledTime = note.time * this.tempoScale;
+          const when = this.startTime + scaledTime;
+
+          if (when >= now - 0.05) { // small grace period
+            const inst = this.instruments[note.program] || this.instruments[0];
+            if (inst) {
+              try {
+                const node = inst.play(note.midi, Math.max(when, now), {
+                  duration: note.duration * this.tempoScale,
+                  gain: (note.velocity / 127),
+                });
+                if (node) this.scheduledNodes.push(node);
+              } catch(e) { /* ignore scheduling errors */ }
+            }
+          }
+          this.nextNoteIdx++;
+        }
+
+        // Progress callback
+        if (this.onProgress) {
+          this.onProgress(elapsedOrig, this.midiData.totalDuration);
+        }
+
+        // Check if playback ended
+        if (elapsedOrig >= this.midiData.totalDuration + 1) {
+          this.stop();
+          if (this.onEnd) this.onEnd();
+        }
+      }, INTERVAL);
+
+      // Highlighting loop (higher frequency for smooth highlighting)
+      this.highlightTimer = setInterval(() => {
+        if (!this.isPlaying) return;
+        const elapsed = this.audioCtx.currentTime - this.startTime;
+        const origMs = (elapsed / this.tempoScale) * 1000;
+        this.highlightNotes(origMs);
+      }, 30);
+    }
+
+    stopScheduling() {
+      if (this.scheduleTimer) { clearInterval(this.scheduleTimer); this.scheduleTimer = null; }
+      if (this.highlightTimer) { clearInterval(this.highlightTimer); this.highlightTimer = null; }
+    }
+
+    stopAllNotes() {
+      for (const node of this.scheduledNodes) {
+        try { if (node && node.stop) node.stop(); } catch(e) {}
+      }
+      this.scheduledNodes = [];
+      this.clearHighlights();
+    }
+
+    highlightNotes(timeMs) {
+      if (!window._vrvToolkit) return;
+      try {
+        const elements = window._vrvToolkit.getElementsAtTime(timeMs);
+        this.clearHighlights();
+        if (elements && elements.notes) {
+          let needsPageChange = false;
+          for (const id of elements.notes) {
+            const el = document.getElementById(id);
+            if (el) {
+              el.classList.add('note-active');
+            } else {
+              needsPageChange = true;
+            }
+          }
+          // Auto-page-turn if notes are on a different page
+          if (needsPageChange && elements.page && elements.page !== window._currentPage) {
+            if (this.onPageChange) this.onPageChange(elements.page);
+          }
+        }
+      } catch(e) { /* ignore */ }
+    }
+
+    clearHighlights() {
+      const active = document.querySelectorAll('.note-active');
+      for (const el of active) el.classList.remove('note-active');
+    }
+
+    getCurrentOrigTime() {
+      if (!this.isPlaying) return this.pauseOffset;
+      const elapsed = this.audioCtx.currentTime - this.startTime;
+      return elapsed / this.tempoScale;
+    }
+  }
+
+  // ============================================================
+  //  STATE
+  // ============================================================
+  let vrvToolkit = null;
+  let currentPage = 1;
+  let totalPages = 1;
+  let zoomLevel = 100;
+  let verovioReady = false;
+  let currentFileName = '';
+  let originalXmlData = null; // store for re-rendering
+  const engine = new PlaybackEngine();
+
+  // Expose for highlighting
+  window._currentPage = 1;
+
+  // ============================================================
+  //  DOM REFS
+  // ============================================================
+  const loading = document.getElementById('loading');
+  const loadingText = document.getElementById('loading-text');
+  const uploadZone = document.getElementById('upload-zone');
+  const dropArea = document.getElementById('drop-area');
+  const fileInput = document.getElementById('file-input');
+  const toolbarContainer = document.getElementById('toolbar-container');
+  const scoreWrapper = document.getElementById('score-wrapper');
+  const scoreContainer = document.getElementById('score-container');
+  const fileNameEl = document.getElementById('file-name');
+  const pageInfo = document.getElementById('page-info');
+  const zoomLabel = document.getElementById('zoom-label');
+  const errorEl = document.getElementById('error');
+  const btnNew = document.getElementById('btn-new');
+  const btnPlay = document.getElementById('btn-play');
+  const btnStop = document.getElementById('btn-stop');
+  const timeDisplay = document.getElementById('time-display');
+  const progressBar = document.getElementById('progress-bar');
+  const progressFill = document.getElementById('progress-fill');
+  const sliderTempo = document.getElementById('slider-tempo');
+  const tempoLabel = document.getElementById('tempo-label');
+  const sliderVolume = document.getElementById('slider-volume');
+  const exportMenu = document.getElementById('export-menu');
+  const statusMsg = document.getElementById('status-msg');
+
+  // ============================================================
+  //  VEROVIO LOADER
+  // ============================================================
+  function loadVerovio() {
+    showLoading('Ładowanie biblioteki Verovio...');
+    const script = document.createElement('script');
+    script.src = 'https://www.verovio.org/javascript/develop/verovio-toolkit-wasm.js';
+    script.onload = function() {
+      loadingText.textContent = 'Inicjalizacja Verovio...';
+      verovio.module.onRuntimeInitialized = function() {
+        vrvToolkit = new verovio.toolkit();
+        window._vrvToolkit = vrvToolkit;
+        verovioReady = true;
+        hideLoading();
+        console.log('Verovio ready');
+      };
+    };
+    script.onerror = function() {
+      hideLoading();
+      showError('Nie udało się załadować biblioteki Verovio. Sprawdź połączenie z internetem.');
+    };
+    document.head.appendChild(script);
+  }
+
+  // ============================================================
+  //  FILE HANDLING
+  // ============================================================
+  dropArea.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  dropArea.addEventListener('dragover', (e) => { e.preventDefault(); dropArea.classList.add('dragover'); });
+  dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+  dropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  async function handleFile(file) {
+    hideError();
+    engine.stop();
+    currentFileName = file.name;
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if (!verovioReady) {
+      showError('Verovio jeszcze się ładuje. Spróbuj za chwilę.');
+      return;
+    }
+
+    showLoading('Wczytywanie partytury...');
+
+    try {
+      let xmlData;
+
+      if (ext === 'mxl') {
+        loadingText.textContent = 'Rozpakowywanie .mxl...';
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+
+        let scoreFile = null;
+        const containerFile = zip.file('META-INF/container.xml');
+        if (containerFile) {
+          const containerXml = await containerFile.async('string');
+          const parser = new DOMParser();
+          const containerDoc = parser.parseFromString(containerXml, 'text/xml');
+          const rootfile = containerDoc.querySelector('rootfile');
+          if (rootfile) {
+            const fullPath = rootfile.getAttribute('full-path');
+            if (fullPath) scoreFile = zip.file(fullPath);
+          }
+        }
+
+        if (!scoreFile) {
+          const files = Object.keys(zip.files);
+          const candidate = files.find(f =>
+            !f.startsWith('META-INF') && !f.endsWith('/') &&
+            (f.endsWith('.xml') || f.endsWith('.musicxml'))
+          );
+          if (candidate) scoreFile = zip.file(candidate);
+        }
+
+        if (!scoreFile) throw new Error('Nie znaleziono pliku MusicXML w archiwum .mxl');
+        xmlData = await scoreFile.async('string');
+      } else {
+        xmlData = await file.text();
+      }
+
+      originalXmlData = xmlData;
+      loadingText.textContent = 'Renderowanie zapisu nutowego...';
+
+      // Configure Verovio
+      const containerWidth = scoreContainer.clientWidth - 48;
+      vrvToolkit.setOptions({
+        pageWidth: Math.max(containerWidth * 100 / zoomLevel, 800),
+        pageHeight: 60000,
+        scale: zoomLevel,
+        adjustPageHeight: true,
+        breaks: 'auto',
+        header: 'auto',
+        footer: 'none',
+        spacingStaff: 8,
+        spacingSystem: 12,
+        font: 'Bravura',
+      });
+
+      const success = vrvToolkit.loadData(xmlData);
+      if (!success) throw new Error('Verovio nie rozpoznało formatu pliku.');
+
+      totalPages = vrvToolkit.getPageCount();
+      currentPage = 1;
+
+      renderPage();
+      showScoreView();
+
+      // Generate MIDI and prepare playback
+      loadingText.textContent = 'Przygotowywanie playbacku...';
+      await prepareMidi();
+
+      hideLoading();
+
+    } catch (err) {
+      hideLoading();
+      showError('Błąd: ' + err.message);
+      console.error(err);
+    }
+  }
+
+  async function prepareMidi() {
+    try {
+      const base64Midi = vrvToolkit.renderToMIDI();
+      if (!base64Midi) {
+        console.warn('Verovio nie wygenerowało MIDI');
+        return;
+      }
+
+      const binary = atob(base64Midi);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      const parser = new MidiParser();
+      const midiData = parser.parse(bytes);
+
+      // Set tempo slider to detected BPM
+      const baseBpm = midiData.baseBpm || 120;
+      sliderTempo.value = baseBpm;
+      tempoLabel.textContent = baseBpm + ' BPM';
+      engine.tempoScale = 1.0; // original tempo = 1.0
+
+      // Update time display
+      updateTimeDisplay(0, midiData.totalDuration);
+
+      // Load instruments
+      loadingText.textContent = 'Ładowanie instrumentów SoundFont...';
+      await engine.loadMidi(midiData);
+
+      // Enable controls
+      btnPlay.disabled = false;
+      btnStop.disabled = false;
+
+    } catch (err) {
+      console.error('MIDI preparation error:', err);
+      showStatus('Nie udało się przygotować playbacku MIDI');
+    }
+  }
+
+  // ============================================================
+  //  RENDERING
+  // ============================================================
+  function renderPage() {
+    const svg = vrvToolkit.renderToSVG(currentPage, {});
+    scoreContainer.innerHTML = svg;
+    pageInfo.textContent = currentPage + ' / ' + totalPages;
+    window._currentPage = currentPage;
+    document.getElementById('btn-prev').disabled = (currentPage <= 1);
+    document.getElementById('btn-next').disabled = (currentPage >= totalPages);
+  }
+
+  function reloadScore() {
+    const containerWidth = scoreContainer.clientWidth - 48;
+    vrvToolkit.setOptions({
+      pageWidth: Math.max(containerWidth * 100 / zoomLevel, 800),
+      scale: zoomLevel,
+    });
+    vrvToolkit.redoLayout();
+    totalPages = vrvToolkit.getPageCount();
+    if (currentPage > totalPages) currentPage = totalPages;
+    renderPage();
+  }
+
+  // ============================================================
+  //  PLAYBACK CONTROLS
+  // ============================================================
+  btnPlay.addEventListener('click', async () => {
+    await engine.init();
+    if (engine.isPlaying) {
+      engine.pause();
+      btnPlay.innerHTML = '&#9654;';
+      btnPlay.classList.remove('playing');
+    } else {
+      engine.play();
+      btnPlay.innerHTML = '&#10074;&#10074;';
+      btnPlay.classList.add('playing');
+    }
+  });
+
+  btnStop.addEventListener('click', () => {
+    engine.stop();
+    btnPlay.innerHTML = '&#9654;';
+    btnPlay.classList.remove('playing');
+    updateTimeDisplay(0, engine.midiData ? engine.midiData.totalDuration : 0);
+    progressFill.style.width = '0%';
+  });
+
+  // Keyboard: space = play/pause
+  document.addEventListener('keydown', (e) => {
+    // Don't interfere with inputs
+    if (e.target.tagName === 'INPUT') return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      btnPlay.click();
+    }
+    if (e.key === 'ArrowLeft' && !e.shiftKey && currentPage > 1) { currentPage--; renderPage(); }
+    if (e.key === 'ArrowRight' && !e.shiftKey && currentPage < totalPages) { currentPage++; renderPage(); }
+    if (e.key === '+' || e.key === '=') zoomIn();
+    if (e.key === '-' && !e.ctrlKey) zoomOut();
+  });
+
+  // Progress callback
+  engine.onProgress = (currentSec, totalSec) => {
+    updateTimeDisplay(currentSec, totalSec);
+    const pct = totalSec > 0 ? (currentSec / totalSec) * 100 : 0;
+    progressFill.style.width = Math.min(pct, 100) + '%';
+  };
+
+  engine.onEnd = () => {
+    btnPlay.innerHTML = '&#9654;';
+    btnPlay.classList.remove('playing');
+  };
+
+  engine.onPageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      currentPage = page;
+      renderPage();
+    }
+  };
+
+  // Click on progress bar to seek
+  progressBar.addEventListener('click', (e) => {
+    const rect = progressBar.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    engine.seekTo(fraction);
+    progressFill.style.width = (fraction * 100) + '%';
+  });
+
+  // ============================================================
+  //  TEMPO CONTROL
+  // ============================================================
+  const originalBpmRef = { value: 88 }; // will be updated when MIDI loads
+
+  sliderTempo.addEventListener('input', () => {
+    const newBpm = parseInt(sliderTempo.value);
+    tempoLabel.textContent = newBpm + ' BPM';
+
+    if (engine.midiData) {
+      const baseBpm = engine.midiData.baseBpm || 120;
+      const scale = baseBpm / newBpm;
+      engine.setTempoScale(scale);
+    }
+  });
+
+  // Volume
+  sliderVolume.addEventListener('input', () => {
+    engine.setVolume(parseInt(sliderVolume.value) / 100);
+  });
+
+  // ============================================================
+  //  ZOOM
+  // ============================================================
+  function zoomIn() {
+    if (zoomLevel >= 200) return;
+    zoomLevel += 10;
+    zoomLabel.textContent = zoomLevel + '%';
+    reloadScore();
+  }
+
+  function zoomOut() {
+    if (zoomLevel <= 30) return;
+    zoomLevel -= 10;
+    zoomLabel.textContent = zoomLevel + '%';
+    reloadScore();
+  }
+
+  document.getElementById('btn-zoom-in').addEventListener('click', zoomIn);
+  document.getElementById('btn-zoom-out').addEventListener('click', zoomOut);
+
+  // ============================================================
+  //  PAGE NAVIGATION
+  // ============================================================
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; renderPage(); }
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    if (currentPage < totalPages) { currentPage++; renderPage(); }
+  });
+
+  // ============================================================
+  //  EXPORT FUNCTIONS
+  // ============================================================
+  document.getElementById('btn-export').addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportMenu.classList.toggle('open');
+  });
+
+  document.addEventListener('click', () => exportMenu.classList.remove('open'));
+
+  window.doExport = async function(type) {
+    exportMenu.classList.remove('open');
+
+    if (type === 'svg') {
+      exportSVG();
+    } else if (type === 'midi') {
+      exportMIDI();
+    } else if (type === 'pdf') {
+      await exportPDF();
+    }
+  };
+
+  function exportSVG() {
+    const svg = vrvToolkit.renderToSVG(currentPage, {});
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    downloadBlob(blob, baseName() + '_strona' + currentPage + '.svg');
+    showStatus('Wyeksportowano SVG strony ' + currentPage);
+  }
+
+  function exportMIDI() {
+    const base64 = vrvToolkit.renderToMIDI();
+    if (!base64) { showStatus('Nie udało się wygenerować MIDI'); return; }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'audio/midi' });
+    downloadBlob(blob, baseName() + '.mid');
+    showStatus('Wyeksportowano MIDI');
+  }
+
+  async function exportPDF() {
+    showLoading('Generowanie PDF...');
+
+    try {
+      const { jsPDF } = window.jspdf;
+
+      // Render first page to determine dimensions
+      const firstSvg = vrvToolkit.renderToSVG(1, {});
+      const dims = getSvgDimensions(firstSvg);
+
+      // A4 in points: 595.28 x 841.89
+      const pageW = 595.28;
+      const pageH = 841.89;
+      const margin = 36; // 0.5 inch
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: 'a4',
+      });
+
+      for (let p = 1; p <= totalPages; p++) {
+        loadingText.textContent = 'PDF: strona ' + p + ' / ' + totalPages + '...';
+
+        if (p > 1) pdf.addPage();
+
+        const svgStr = vrvToolkit.renderToSVG(p, {});
+        const img = await svgToImage(svgStr, 2); // 2x scale for quality
+
+        const availW = pageW - 2 * margin;
+        const availH = pageH - 2 * margin;
+        const scale = Math.min(availW / img.width * 2, availH / img.height * 2);
+        const drawW = img.width / 2 * scale;
+        const drawH = img.height / 2 * scale;
+        const x = margin + (availW - drawW) / 2;
+
+        pdf.addImage(img.dataUrl, 'PNG', x, margin, drawW, drawH);
+      }
+
+      pdf.save(baseName() + '.pdf');
+      hideLoading();
+      showStatus('Wyeksportowano PDF (' + totalPages + ' stron)');
+    } catch (err) {
+      hideLoading();
+      showError('Błąd eksportu PDF: ' + err.message);
+      console.error(err);
+    }
+  }
+
+  function svgToImage(svgStr, scale) {
+    return new Promise((resolve, reject) => {
+      const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth * scale;
+        canvas.height = img.naturalHeight * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        resolve({
+          dataUrl: canvas.toDataURL('image/png'),
+          width: canvas.width,
+          height: canvas.height,
+        });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Nie udało się wyrenderować SVG do obrazu'));
+      };
+
+      img.src = url;
+    });
+  }
+
+  function getSvgDimensions(svgStr) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgStr, 'image/svg+xml');
+    const svg = doc.querySelector('svg');
+    return {
+      width: parseFloat(svg.getAttribute('width')) || 800,
+      height: parseFloat(svg.getAttribute('height')) || 600,
+    };
+  }
+
+  // ============================================================
+  //  HELPERS
+  // ============================================================
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  function baseName() {
+    return currentFileName.replace(/\.[^.]+$/, '') || 'score';
+  }
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function updateTimeDisplay(currentSec, totalSec) {
+    timeDisplay.textContent = formatTime(currentSec) + ' / ' + formatTime(totalSec);
+  }
+
+  let statusTimer;
+  function showStatus(msg) {
+    statusMsg.textContent = msg;
+    statusMsg.classList.add('visible');
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => statusMsg.classList.remove('visible'), 3000);
+  }
+
+  // ============================================================
+  //  UI STATE
+  // ============================================================
+  function showScoreView() {
+    uploadZone.classList.add('hidden');
+    toolbarContainer.classList.add('active');
+    scoreWrapper.classList.add('active');
+    btnNew.style.display = '';
+    fileNameEl.textContent = currentFileName;
+    zoomLabel.textContent = zoomLevel + '%';
+  }
+
+  window.resetViewer = function() {
+    engine.stop();
+    uploadZone.classList.remove('hidden');
+    toolbarContainer.classList.remove('active');
+    scoreWrapper.classList.remove('active');
+    btnNew.style.display = 'none';
+    scoreContainer.innerHTML = '';
+    fileInput.value = '';
+    currentPage = 1;
+    totalPages = 1;
+    zoomLevel = 100;
+    originalXmlData = null;
+    btnPlay.disabled = true;
+    btnStop.disabled = true;
+    btnPlay.innerHTML = '&#9654;';
+    btnPlay.classList.remove('playing');
+    progressFill.style.width = '0%';
+    timeDisplay.textContent = '0:00 / 0:00';
+    hideError();
+  };
+
+  function showLoading(text) {
+    loadingText.textContent = text || 'Ładowanie...';
+    loading.classList.add('active');
+  }
+  function hideLoading() { loading.classList.remove('active'); }
+  function showError(msg) { errorEl.textContent = msg; errorEl.classList.add('active'); }
+  function hideError() { errorEl.classList.remove('active'); }
+
+  // ============================================================
+  //  RESPONSIVE RESIZE
+  // ============================================================
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (verovioReady && vrvToolkit && scoreWrapper.classList.contains('active')) {
+        reloadScore();
+      }
+    }, 300);
+  });
+
+  // ============================================================
+  //  INIT
+  // ============================================================
+  loadVerovio();
+
+})();
+</script>
+</body>
+</html>

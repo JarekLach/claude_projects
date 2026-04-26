@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Funkcja Zeta Riemanna — Interaktywna Eksploracja</title>
+
+  <!-- CDN: Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- CDN: Chart.js 4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- CDN: Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════════════
+       DESIGN TOKENS — ciemna paleta naukowa
+       (inspiracja: 3Blue1Brown)
+    ═══════════════════════════════════════════════ */
+    :root {
+      --bg:      #07090f;   /* głęboka czerń */
+      --bg2:     #0c1220;   /* karta */
+      --bg3:     #111d32;   /* podkarta */
+      --border:  #192840;
+      --gold:    #f5c842;   /* główny akcent */
+      --blue:    #58a6ff;   /* Re(ζ) */
+      --pink:    #ff6b9d;   /* Im(ζ) */
+      --teal:    #56cf9e;   /* |ζ| */
+      --purple:  #b084ff;   /* zera */
+      --text:    #dce4f0;
+      --muted:   #6e8098;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Lato', sans-serif;
+      min-height: 100vh;
+      /* dyskretny wzór kropek */
+      background-image: radial-gradient(circle, rgba(25,40,64,0.6) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* ── Typografia ── */
+    .font-display { font-family: 'Playfair Display', serif; }
+    .font-mono    { font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+    /* ── Karta ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+    }
+    .card-sm { padding: .8rem; }
+    .glow-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at 30% 20%, rgba(88,166,255,.04), transparent 60%);
+      pointer-events: none;
+    }
+    .glow-card { position: relative; overflow: hidden; }
+
+    /* ── Główne zakładki ── */
+    .tab-btn {
+      padding: .5rem 1.2rem;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .875rem;
+      font-weight: 600;
+      font-family: 'Lato', sans-serif;
+      transition: color .2s, background .2s, border-color .2s;
+      letter-spacing: .03em;
+    }
+    .tab-btn:hover  { color: var(--text); }
+    .tab-btn.active {
+      color: var(--gold);
+      background: var(--bg2);
+      border-color: var(--border);
+    }
+
+    /* ── Sub-zakładki teorii ── */
+    .stab-btn {
+      padding: .35rem 1rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .8rem;
+      font-weight: 700;
+      font-family: 'Lato', sans-serif;
+      transition: color .2s, border-color .2s;
+      white-space: nowrap;
+    }
+    .stab-btn:hover  { color: var(--text); }
+    .stab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* ── Panele ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp .35s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Blok matematyczny ── */
+    .math-block {
+      background: rgba(245,200,66,.04);
+      border-left: 3px solid var(--gold);
+      padding: .75rem 1rem;
+      border-radius: 0 8px 8px 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: .85rem;
+      line-height: 1.75;
+      color: #b8cfe8;
+      margin: .8rem 0;
+      white-space: pre-wrap;
+    }
+    .math-block.purple { border-left-color: var(--purple); background: rgba(176,132,255,.04); font-size:.9rem; }
+    .math-block.teal   { border-left-color: var(--teal);   background: rgba(86,207,158,.04); }
+
+    /* ── Suwak ── */
+    input[type=range] {
+      -webkit-appearance: none;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--gold);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(245,200,66,.5);
+    }
+
+    /* ── Pola tekstowe ── */
+    .inp {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: .85rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .inp:focus { border-color: var(--gold); }
+
+    /* ── Przyciski ── */
+    .btn-gold {
+      background: var(--gold);
+      color: #060a0f;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Lato', sans-serif;
+      font-size: .875rem;
+      transition: box-shadow .2s, transform .1s;
+    }
+    .btn-gold:hover { box-shadow: 0 0 20px rgba(245,200,66,.4); transform: translateY(-1px); }
+    .btn-gold:active { transform: translateY(0); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Lato', sans-serif;
+      font-size: .875rem;
+      transition: all .2s;
+    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    .btn-sm {
+      padding: 5px 14px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: .75rem;
+      transition: all .2s;
+    }
+    .btn-sm:hover { border-color: var(--purple); color: var(--purple); }
+
+    /* ── Odznaki zer ── */
+    .zero-badge {
+      display: inline-block;
+      background: rgba(176,132,255,.1);
+      border: 1px solid rgba(176,132,255,.25);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: .73rem;
+      color: var(--purple);
+      margin: 2px;
+      cursor: default;
+      transition: background .2s;
+    }
+    .zero-badge:hover { background: rgba(176,132,255,.2); }
+
+    /* ── Pigułka informacyjna ── */
+    .info-pill {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: .8rem;
+    }
+
+    /* ── Wysokość wykresów ── */
+    .chart-wrap { position: relative; height: 230px; width: 100%; }
+
+    /* ── Animacja tytułu ── */
+    @keyframes shimmer {
+      0%   { background-position: -300% center; }
+      100% { background-position:  300% center; }
+    }
+    .shimmer-text {
+      background: linear-gradient(90deg, #c89a20, #f5c842, #ffe07a, #f5c842, #c89a20);
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 5s linear infinite;
+    }
+
+    /* ── Treść teorii ── */
+    .theory-section h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: var(--gold);
+      margin: 1.5rem 0 .5rem;
+    }
+    .theory-section h3:first-child { margin-top: 0; }
+    .theory-section p {
+      line-height: 1.85;
+      color: #a8bbd0;
+      margin-bottom: .7rem;
+    }
+    .theory-section .hl  { color: var(--blue); font-weight: 700; }
+    .theory-section .em  { color: var(--pink); font-style: italic; }
+    .theory-section .hlg { color: var(--gold); font-weight: 700; }
+
+    /* ── Separator ── */
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: .9rem 0; }
+
+    /* ── Canvas ── */
+    canvas { display: block; }
+
+    /* ── Wynik kalkulatora ── */
+    .result-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+
+<!-- ░░░░░░░░░░░░░░░░░░░░░░░░░ BODY ░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+<body>
+
+<!-- ═════════════════════════════════════════════ NAGŁÓWEK -->
+<header style="background: linear-gradient(160deg, #07090f 0%, #0c1830 55%, #07090f 100%);
+               border-bottom: 1px solid var(--border);">
+  <div class="max-w-7xl mx-auto px-5 py-7">
+    <div class="flex flex-col md:flex-row items-center md:items-end gap-5">
+
+      <!-- Wielkie ζ -->
+      <div class="font-display shimmer-text select-none"
+           style="font-size: clamp(5rem,12vw,7rem); line-height:1; flex-shrink:0;">ζ</div>
+
+      <!-- Tytuł i opis -->
+      <div class="flex-1 text-center md:text-left">
+        <h1 class="font-display text-3xl md:text-4xl font-bold text-white leading-tight">
+          Funkcja Zeta Riemanna
+        </h1>
+        <p class="mt-1 text-sm" style="color:var(--muted);">
+          Interaktywna eksploracja matematyczna &nbsp;·&nbsp; Linia krytyczna &nbsp;·&nbsp; Spirala &nbsp;·&nbsp; Niebanalne zera
+        </p>
+        <!-- Etykiety tematyczne -->
+        <div class="mt-3 flex flex-wrap gap-2 justify-center md:justify-start">
+          <span class="font-mono text-xs px-3 py-1 rounded"
+                style="background:rgba(88,166,255,.09); color:var(--blue); border:1px solid rgba(88,166,255,.2);">
+            Re(s) = ½ — linia krytyczna
+          </span>
+          <span class="font-mono text-xs px-3 py-1 rounded"
+                style="background:rgba(176,132,255,.09); color:var(--purple); border:1px solid rgba(176,132,255,.2);">
+            15 zer niebanalnch
+          </span>
+          <span class="font-mono text-xs px-3 py-1 rounded"
+                style="background:rgba(245,200,66,.09); color:var(--gold); border:1px solid rgba(245,200,66,.2);">
+            Hipoteza Riemanna (1859)
+          </span>
+        </div>
+      </div>
+
+      <!-- Formulary definicji (tylko desktop) -->
+      <div class="card hidden lg:block" style="min-width:210px; border-color:rgba(245,200,66,.2);">
+        <div class="font-mono text-xs" style="color:var(--muted);">dla Re(s) &gt; 1 :</div>
+        <div class="font-mono text-sm mt-1">
+          ζ(s) =
+          <span style="color:var(--blue)">∑</span><sub style="color:var(--muted); font-size:.65rem">n=1</sub><sup style="color:var(--muted); font-size:.65rem">∞</sup>
+          <span style="color:var(--gold)">1/nˢ</span>
+        </div>
+        <hr class="sep" />
+        <div class="font-mono text-xs" style="color:var(--muted);">wzór Eulera:</div>
+        <div class="font-mono text-sm mt-1">
+          ζ(s) = <span style="color:var(--pink)">∏<sub>p</sub></span>
+          <span style="color:var(--gold)">(1−p<sup>−s</sup>)<sup>−1</sup></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</header>
+
+<!-- ═════════════════════════════════════════════ MAIN -->
+<main class="max-w-7xl mx-auto px-4 md:px-5 py-5">
+
+  <!-- ── Nawigacja zakładek ── -->
+  <div class="flex flex-wrap gap-1 border-b mb-5 pb-0" style="border-color:var(--border);">
+    <button class="tab-btn active" onclick="switchTab('critical',0)">📈 Linia Krytyczna</button>
+    <button class="tab-btn"        onclick="switchTab('spiral',1)">🌀 Spirala Zeta</button>
+    <button class="tab-btn"        onclick="switchTab('calc',2)">🧮 Kalkulator</button>
+    <button class="tab-btn"        onclick="switchTab('theory',3)">📚 Teoria</button>
+  </div>
+
+  <!-- ══════════════════════════════ PANEL 1 — Linia Krytyczna -->
+  <div id="panel-critical" class="panel active">
+
+    <!-- Kontrolki -->
+    <div class="card glow-card mb-4">
+      <div class="flex flex-wrap gap-4 items-end">
+
+        <!-- Suwak max t -->
+        <div style="min-width:160px; flex:1;">
+          <label class="block text-xs font-mono mb-1" style="color:var(--muted);">
+            Maks.&nbsp;t =
+            <span id="maxTDisplay" class="font-mono" style="color:var(--gold);">70</span>
+          </label>
+          <input type="range" id="maxTSlider" min="50" max="300" value="70"
+                 class="w-full" oninput="onSliderChange(this.value)" />
+        </div>
+
+        <!-- Wpisz t -->
+        <div>
+          <label class="block text-xs font-mono mb-1" style="color:var(--muted);">Wpisz t:</label>
+          <input type="number" id="maxTInput" value="70" min="50" max="300"
+                 class="inp w-24" oninput="onInputChange(this.value)" />
+        </div>
+
+        <div style="width:1px; height:36px; background:var(--border); align-self:center;"></div>
+
+        <!-- Przyciski animacji -->
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn-gold" id="playBtn" onclick="togglePlay()">▶ Animacja</button>
+          <button class="btn-outline" onclick="resetAnim()">↺ Reset</button>
+        </div>
+
+        <!-- Bieżące t -->
+        <div class="info-pill">
+          <span style="color:var(--muted);">t = </span>
+          <span id="currentT" style="color:var(--gold); font-weight:600;">0.000</span>
+        </div>
+      </div>
+
+      <!-- Wartości ζ na bieżąco -->
+      <div class="flex flex-wrap gap-2 mt-3">
+        <div class="info-pill">
+          <span style="color:var(--muted);">Re(ζ) = </span>
+          <span id="dispReZ" style="color:var(--blue); font-weight:600;">—</span>
+        </div>
+        <div class="info-pill">
+          <span style="color:var(--muted);">Im(ζ) = </span>
+          <span id="dispImZ" style="color:var(--pink); font-weight:600;">—</span>
+        </div>
+        <div class="info-pill">
+          <span style="color:var(--muted);">|ζ| = </span>
+          <span id="dispAbsZ" style="color:var(--teal); font-weight:600;">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wykres 1: Re i Im -->
+    <div class="card glow-card mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h2 class="font-display text-lg" style="color:var(--text);">
+          Części rzeczywista i urojona &nbsp;ζ(½ + it)
+        </h2>
+        <div class="flex gap-4 font-mono text-xs">
+          <span style="color:var(--blue);">● Re(ζ)</span>
+          <span style="color:var(--pink);">● Im(ζ)</span>
+          <span style="color:rgba(176,132,255,.7);">| zera ρₙ</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="mainChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Wykres 2: |ζ| -->
+    <div class="card glow-card">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h2 class="font-display text-lg" style="color:var(--text);">
+          Moduł &nbsp;|ζ(½ + it)|
+        </h2>
+        <span class="font-mono text-xs" style="color:var(--teal);">● |ζ(s)|</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="absChart"></canvas>
+      </div>
+
+      <hr class="sep" />
+      <!-- Lista zer -->
+      <p class="text-xs mb-2" style="color:var(--muted);">
+        Pierwsze 15 niebanalnch zer (pionowe fioletowe linie):
+      </p>
+      <div id="zerosList" class="flex flex-wrap"></div>
+    </div>
+
+  </div><!-- /panel-critical -->
+
+  <!-- ══════════════════════════════ PANEL 2 — Spirala -->
+  <div id="panel-spiral" class="panel">
+    <div class="grid md:grid-cols-5 gap-4">
+
+      <!-- Canvas spirali (3/5) -->
+      <div class="md:col-span-3 card glow-card">
+        <h2 class="font-display text-lg mb-2" style="color:var(--text);">Spirala w płaszczyźnie zespolonej</h2>
+        <p class="text-xs mb-3" style="color:var(--muted);">
+          Krzywa parametryczna:
+          <span class="font-mono" style="color:var(--blue);">x = Re(ζ(½+it))</span>,
+          <span class="font-mono" style="color:var(--pink);">y = Im(ζ(½+it))</span>
+          — punkt przechodzi przez (0,0) przy każdym zerze
+        </p>
+        <div class="flex justify-center">
+          <canvas id="spiralCanvas" width="460" height="460"
+                  style="border-radius:8px; background:#050810; max-width:100%; height:auto;"></canvas>
+        </div>
+      </div>
+
+      <!-- Panel boczny spirali (2/5) -->
+      <div class="md:col-span-2 flex flex-col gap-4">
+
+        <div class="card">
+          <h3 class="font-semibold text-sm mb-3" style="color:var(--gold);">Sterowanie spiralą</h3>
+
+          <label class="text-xs font-mono block mb-1" style="color:var(--muted);">Szybkość:</label>
+          <input type="range" id="spiralSpeed" min="1" max="10" value="4" class="w-full mb-3" />
+
+          <label class="text-xs font-mono block mb-1" style="color:var(--muted);">
+            Maks. t = <span id="spiralMaxTLabel" style="color:var(--gold);">70</span>
+          </label>
+          <input type="range" id="spiralMaxTSlider" min="20" max="200" value="70"
+                 class="w-full mb-3" oninput="onSpiralMaxT(this.value)" />
+
+          <div class="flex gap-2 flex-wrap">
+            <button class="btn-gold text-sm" id="spiralPlayBtn" onclick="toggleSpiral()">▶ Start</button>
+            <button class="btn-outline text-sm" onclick="resetSpiral()">↺ Reset</button>
+          </div>
+
+          <hr class="sep" />
+          <div class="info-pill text-xs">
+            <span style="color:var(--muted);">t = </span>
+            <span id="spiralT" style="color:var(--gold);">0.000</span>
+          </div>
+          <div class="flex gap-2 mt-2">
+            <div class="info-pill flex-1 text-center" style="font-size:.75rem;">
+              <div style="color:var(--muted);">x = Re(ζ)</div>
+              <div id="spiralX" style="color:var(--blue);">—</div>
+            </div>
+            <div class="info-pill flex-1 text-center" style="font-size:.75rem;">
+              <div style="color:var(--muted);">y = Im(ζ)</div>
+              <div id="spiralY" style="color:var(--pink);">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="font-semibold text-sm mb-2" style="color:var(--gold);">Co widzisz?</h3>
+          <p class="text-sm" style="color:#96b0c8; line-height:1.75;">
+            Złoty punkt porusza się po spirali w płaszczyźnie zespolonej.
+            <strong style="color:var(--teal);">Zielony okrąg</strong> zapala się, gdy punkt zbliża się do (0,0) —
+            czyli gdy ζ(½+it) ≈ 0. Każde takie przejście to niebanalne zero.
+          </p>
+          <p class="text-sm mt-2" style="color:#96b0c8; line-height:1.75;">
+            <span style="color:var(--gold)">Hipoteza Riemanna</span> twierdzi, że <em>wszystkie</em> niebanalne
+            zera są na linii Re(s) = ½ — i spirala nigdy nie okrąża zera poza tą linią.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /panel-spiral -->
+
+  <!-- ══════════════════════════════ PANEL 3 — Kalkulator -->
+  <div id="panel-calc" class="panel">
+    <div class="max-w-2xl mx-auto">
+
+      <!-- Formularz -->
+      <div class="card glow-card mb-4">
+        <h2 class="font-display text-2xl mb-1" style="color:var(--text);">Kalkulator ζ(s)</h2>
+        <p class="text-sm mb-4" style="color:var(--muted);">
+          Oblicz ζ(s) dla dowolnego zespolonego s = σ + it
+          (szereg eta Dirichleta z przyspieszeniem Eulera, N = 80)
+        </p>
+
+        <div class="grid grid-cols-2 gap-4 mb-3">
+          <div>
+            <label class="block text-xs font-mono mb-1" style="color:var(--muted);">Re(s) = σ</label>
+            <input type="number" id="calcRe" value="0.5" step="0.1" class="inp w-full" />
+          </div>
+          <div>
+            <label class="block text-xs font-mono mb-1" style="color:var(--muted);">Im(s) = t</label>
+            <input type="number" id="calcIm" value="14.1347" step="0.001" class="inp w-full" />
+          </div>
+        </div>
+
+        <!-- Szybkie wartości -->
+        <div class="mb-4">
+          <span class="text-xs font-mono mr-1" style="color:var(--muted);">Szybkie:</span>
+          <button class="btn-sm" onclick="setCalcAndRun(0.5, 14.1347)">ρ₁</button>
+          <button class="btn-sm" onclick="setCalcAndRun(0.5, 21.022)">ρ₂</button>
+          <button class="btn-sm" onclick="setCalcAndRun(0.5, 25.0109)">ρ₃</button>
+          <button class="btn-sm" onclick="setCalcAndRun(2, 0)">s=2</button>
+          <button class="btn-sm" onclick="setCalcAndRun(-2, 0)">s=−2</button>
+          <button class="btn-sm" onclick="setCalcAndRun(1, 0)">s=1 (biegun)</button>
+          <button class="btn-sm" onclick="setCalcAndRun(0.5, 0)">s=½</button>
+        </div>
+
+        <button class="btn-gold w-full" onclick="calculate()">Oblicz ζ(s)</button>
+      </div>
+
+      <!-- Wynik -->
+      <div class="card glow-card mb-4" id="calcResult" style="display:none;">
+        <h3 class="font-semibold mb-3" style="color:var(--gold);">Wynik obliczeń</h3>
+
+        <div class="font-mono text-sm p-3 rounded mb-3"
+             style="background:var(--bg); border:1px solid var(--border);">
+          <span style="color:var(--muted);">s = </span>
+          <span id="resS" style="color:var(--text);"></span>
+          <br/>
+          <span style="color:var(--muted);">ζ(s) = </span>
+          <span id="resZeta" class="result-val" style="color:var(--gold);"></span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <div class="text-center p-3 rounded" style="background:rgba(88,166,255,.07); border:1px solid rgba(88,166,255,.2);">
+            <div class="text-xs font-mono mb-1" style="color:var(--muted);">Re(ζ)</div>
+            <div id="resRe" class="font-mono text-lg" style="color:var(--blue);"></div>
+          </div>
+          <div class="text-center p-3 rounded" style="background:rgba(255,107,157,.07); border:1px solid rgba(255,107,157,.2);">
+            <div class="text-xs font-mono mb-1" style="color:var(--muted);">Im(ζ)</div>
+            <div id="resIm" class="font-mono text-lg" style="color:var(--pink);"></div>
+          </div>
+          <div class="text-center p-3 rounded" style="background:rgba(86,207,158,.07); border:1px solid rgba(86,207,158,.2);">
+            <div class="text-xs font-mono mb-1" style="color:var(--muted);">|ζ(s)|</div>
+            <div id="resAbs" class="font-mono text-lg" style="color:var(--teal);"></div>
+          </div>
+        </div>
+
+        <div id="resNote" class="text-xs p-2 rounded font-mono"
+             style="background:var(--bg); border:1px solid var(--border); color:var(--muted);"></div>
+      </div>
+
+      <!-- Mini-płaszczyzna zespolona -->
+      <div class="card glow-card">
+        <h3 class="font-semibold text-sm mb-1" style="color:var(--text);">Płaszczyzna zespolona</h3>
+        <p class="text-xs mb-2" style="color:var(--muted);">
+          <span style="color:var(--gold)">●</span> s (wejście)
+          <span class="ml-2" style="color:var(--teal)">●</span> ζ(s) (wynik)
+          <span class="ml-2" style="color:rgba(88,166,255,.4)">▌</span> pasmo krytyczne (0 &lt; Re(s) &lt; 1)
+        </p>
+        <canvas id="complexPlane" width="500" height="280"
+                style="border-radius:8px; background:#050810; max-width:100%; height:auto;"></canvas>
+      </div>
+
+    </div>
+  </div><!-- /panel-calc -->
+
+  <!-- ══════════════════════════════ PANEL 4 — Teoria -->
+  <div id="panel-theory" class="panel">
+
+    <!-- Sub-zakładki -->
+    <div class="flex flex-wrap gap-0 border-b mb-5" style="border-color:var(--border); overflow-x:auto;">
+      <button class="stab-btn active" onclick="switchStab('def',this)">Definicja</button>
+      <button class="stab-btn" onclick="switchStab('euler',this)">Wzór Eulera</button>
+      <button class="stab-btn" onclick="switchStab('strip',this)">Pasmo krytyczne</button>
+      <button class="stab-btn" onclick="switchStab('line',this)">Linia krytyczna</button>
+      <button class="stab-btn" onclick="switchStab('hyp',this)">Hipoteza Riemanna</button>
+      <button class="stab-btn" onclick="switchStab('why',this)">Dlaczego ważna</button>
+    </div>
+
+    <div class="max-w-3xl mx-auto">
+
+      <!-- ── Definicja ── -->
+      <div id="stab-def" class="stab-panel theory-section">
+        <h3>Co to jest funkcja zeta Riemanna?</h3>
+        <p>
+          Funkcja zeta Riemanna, oznaczana ζ(s), to jedna z najważniejszych funkcji w matematyce.
+          Wprowadzona przez Leonharda Eulera w XVIII w. dla rzeczywistych s, a dogłębnie zbadana przez
+          <span class="hl">Bernharda Riemanna</span> w przełomowej pracy z 1859 roku, łączy analizę
+          zespoloną z teorią liczb pierwszych.
+        </p>
+        <div class="math-block">ζ(s) = 1/1ˢ + 1/2ˢ + 1/3ˢ + 1/4ˢ + ···
+       = ∑(n=1→∞) 1/nˢ</div>
+        <p>
+          Argument <em>s</em> jest <span class="hl">liczbą zespoloną</span>: s = σ + it,
+          gdzie σ = Re(s), t = Im(s). Powyższy szereg jest zbieżny tylko dla <span class="hl">Re(s) &gt; 1</span>.
+        </p>
+
+        <h3>Analityczne przedłużenie</h3>
+        <p>
+          Choć szereg zbiega tylko dla Re(s) &gt; 1, funkcję ζ(s) można <em class="em">analitycznie przedłużyć</em>
+          na całą płaszczyznę zespoloną, z wyjątkiem <span class="hl">s = 1</span> (biegun prostej rzędu 1).
+          Kluczową rolę odgrywa <span class="hl">funkcja eta Dirichleta</span> η(s):
+        </p>
+        <div class="math-block">η(s) = 1 − 1/2ˢ + 1/3ˢ − 1/4ˢ + ···
+      = ∑(n=1→∞) (−1)ⁿ⁻¹/nˢ
+
+Związek:  ζ(s) = η(s) / (1 − 2¹⁻ˢ)      [dla Re(s) &gt; 0, s ≠ 1]</div>
+        <p>
+          Szereg η(s) zbiega dla <span class="hl">Re(s) &gt; 0</span>, co pozwala obliczać ζ(s)
+          w całym paśmie krytycznym. Kalkulator w tej aplikacji używa właśnie tej metody,
+          przyspieszonej transformacją Eulera (80 składników).
+        </p>
+
+        <h3>Równanie funkcjonalne Riemanna</h3>
+        <p>
+          Riemann pokazał, że ζ(s) spełnia głęboką tożsamość opisującą symetrię względem Re(s) = ½:
+        </p>
+        <div class="math-block">ζ(s) = 2ˢ · πˢ⁻¹ · sin(πs/2) · Γ(1−s) · ζ(1−s)</div>
+        <p>
+          Oznacza to: jeśli znamy ζ(s) po prawej stronie s = ½, to znamy je też po lewej stronie.
+          Banalne zera wynikają z czynnika sin(πs/2) = 0, czyli s = −2, −4, −6, …
+        </p>
+      </div>
+
+      <!-- ── Wzór Eulera ── -->
+      <div id="stab-euler" class="stab-panel theory-section" style="display:none;">
+        <h3>Wzór Eulera — łącznik z liczbami pierwszymi</h3>
+        <p>
+          Euler odkrył zdumiewającą tożsamość łączącą ζ(s) z <span class="hl">iloczynem po wszystkich
+          liczbach pierwszych</span>. Jest to jeden z najpiękniejszych wzorów w matematyce:
+        </p>
+        <div class="math-block">ζ(s) = ∏ₚ (1 − p⁻ˢ)⁻¹
+
+       = 1/(1−2⁻ˢ) · 1/(1−3⁻ˢ) · 1/(1−5⁻ˢ) · 1/(1−7⁻ˢ) · ···</div>
+
+        <h3>Szkic dowodu</h3>
+        <p>
+          Dla każdej liczby pierwszej p rozwijamy czynnik jako szereg geometryczny:
+        </p>
+        <div class="math-block">(1 − p⁻ˢ)⁻¹ = 1 + p⁻ˢ + p⁻²ˢ + p⁻³ˢ + ···</div>
+        <p>
+          Biorąc iloczyn po wszystkich liczbach pierwszych i mnożąc szeregi,
+          zgodnie z <span class="hl">zasadniczym twierdzeniem arytmetyki</span>
+          (każda liczba naturalna jest jednoznacznym iloczynem liczb pierwszych),
+          otrzymujemy dokładnie każdy wyraz szeregu 1/nˢ — raz i tylko raz.
+        </p>
+
+        <h3>Konsekwencje</h3>
+        <p>
+          Wzór Eulera pokazuje bezpośredni związek między zerami ζ(s) a rozkładem liczb pierwszych.
+          Jeśli ζ(ρ) = 0, to w iloczynie „brakuje" pewnej wartości, co zaburza regularność
+          rozkładu liczb pierwszych. Każde zero generuje <em class="em">„falę"</em> w tym rozkładzie:
+        </p>
+        <div class="math-block">π(x) = Li(x) − ∑_ρ Li(x^ρ) + O(log x)
+
+(jawna formuła Riemanna — suma po zerach ρ)</div>
+        <p>
+          Im więcej wiemy o zerach, tym precyzyjniej możemy opisywać zachowanie liczb pierwszych.
+        </p>
+      </div>
+
+      <!-- ── Pasmo krytyczne ── -->
+      <div id="stab-strip" class="stab-panel theory-section" style="display:none;">
+        <h3>Pasmo krytyczne: 0 &lt; Re(s) &lt; 1</h3>
+        <p>
+          Zera funkcji ζ(s) dzielą się na dwa zasadniczo różne rodzaje:
+        </p>
+        <div class="math-block">Banalne zera:    s = −2, −4, −6, −8, ...   (dobrze zrozumiane)
+Niebanalne zera: s ∈ {σ+it : 0 &lt; σ &lt; 1}  (zagadkowe, kluczowe)</div>
+        <p>
+          <span class="hl">Banalne zera</span> to wynik czynnika sin(πs/2) = 0 dla ujemnych parzystych całkowitych.
+          <span class="hl">Niebanalne zera</span> leżą w <em class="em">paśmie krytycznym</em> i są ściśle powiązane
+          z rozkładem liczb pierwszych.
+        </p>
+
+        <h3>Symetrie zer</h3>
+        <p>
+          Z równania funkcjonalnego i symetrii konjugacji wynikają cztery symetrie:
+        </p>
+        <div class="math-block">Jeśli ρ = σ + it jest zerem, to również:
+  1 − ρ = (1−σ) − it    (symetria: Re(s) = ½)
+  ρ̄    = σ − it         (symetria: oś rzeczywista)
+  1 − ρ̄ = (1−σ) + it
+
+Zera tworzą czwórki (lub pary, gdy σ = ½ lub t = 0).</div>
+
+        <h3>Znane wyniki (bez dowodu HR)</h3>
+        <p>
+          <span class="hl">Hardy (1914)</span>: na linii krytycznej Re(s) = ½ leży nieskończenie wiele zer.
+          <br/>
+          <span class="hl">Selberg (1942)</span>: dodatnia proporcja wszystkich zer leży na linii krytycznej.
+          <br/>
+          <span class="hl">Numerycznie</span>: zbadano &gt; 10¹³ pierwszych zer — wszystkie na linii Re(s) = ½.
+        </p>
+        <div class="math-block teal">Twierdzenie (de la Vallée-Poussin, 1896):
+Nie istnieją zera w postaci 1 + it (granica pasma krytycznego).
+⟹  Twierdzenie o liczbach pierwszych: π(x) ~ x/ln(x)</div>
+      </div>
+
+      <!-- ── Linia krytyczna ── -->
+      <div id="stab-line" class="stab-panel theory-section" style="display:none;">
+        <h3>Linia krytyczna: Re(s) = ½</h3>
+        <p>
+          Linia krytyczna to prosta w płaszczyźnie zespolonej:
+          <span class="font-mono" style="color:var(--blue);">s = ½ + it, t ∈ ℝ</span>.
+          To tutaj Riemann podejrzewał — i tu do dziś potwierdzają się — wszystkie niebanalne zera ζ.
+        </p>
+
+        <h3>Pierwsze 15 niebanalnch zer (dokładne wartości)</h3>
+        <div class="math-block">ρ₁  = ½ + 14.134725141734693..·i
+ρ₂  = ½ + 21.022039638771554..·i
+ρ₃  = ½ + 25.010857580145688..·i
+ρ₄  = ½ + 30.424876125859513..·i
+ρ₅  = ½ + 32.935061587739189..·i
+ρ₆  = ½ + 37.586178158825671..·i
+ρ₇  = ½ + 40.918719012147495..·i
+ρ₈  = ½ + 43.327073280914999..·i
+ρ₉  = ½ + 48.005150881167159..·i
+ρ₁₀ = ½ + 49.773832477672302..·i
+ρ₁₁ = ½ + 52.970321477714460..·i
+ρ₁₂ = ½ + 56.446247697063246..·i
+ρ₁₃ = ½ + 59.347044002602353..·i
+ρ₁₄ = ½ + 60.831778524609809..·i
+ρ₁₅ = ½ + 65.112544048081653..·i</div>
+
+        <h3>Funkcja Z Hardyego</h3>
+        <p>
+          Aby ułatwić szukanie zer na linii krytycznej, G.H. Hardy wprowadził funkcję:
+        </p>
+        <div class="math-block">Z(t) = e^{iθ(t)} · ζ(½ + it)
+
+gdzie θ(t) = Im[ln Γ(¼ + ½it)] − (t/2)·ln π</div>
+        <p>
+          Funkcja Z(t) jest <span class="hl">rzeczywista</span> dla rzeczywistego t, dzięki czemu
+          zera ζ(½+it) odpowiadają <em class="em">zmianom znaku</em> Z(t) — łatwym do wykrycia numerycznie.
+        </p>
+      </div>
+
+      <!-- ── Hipoteza Riemanna ── -->
+      <div id="stab-hyp" class="stab-panel theory-section" style="display:none;">
+        <h3>Hipoteza Riemanna (1859)</h3>
+        <p>
+          W przełomowej pracy <em>„Über die Anzahl der Primzahlen unter einer gegebenen Grösse"</em>
+          Bernhard Riemann — mimochodem, jako przypuszczenie bez dowodu — postawił hipotezę:
+        </p>
+        <div class="math-block purple">HIPOTEZA RIEMANNA:
+
+Wszystkie niebanalne zera funkcji ζ(s) mają część rzeczywistą
+równą dokładnie ½.
+
+Innymi słowy: każde ρ takie, że ζ(ρ) = 0 i 0 &lt; Re(ρ) &lt; 1,
+spełnia Re(ρ) = ½.</div>
+
+        <h3>Status — 166 lat otwartego problemu</h3>
+        <p>
+          Hipoteza Riemanna jest jednym z <span class="hlg">siedmiu Problemów Milenijnych</span>
+          ogłoszonych przez Clay Mathematics Institute w 2000 roku.
+          Nagroda za udowodnienie lub obalenie: <span class="hlg">1 000 000 USD</span>.
+        </p>
+        <p>
+          Do 2024 roku zweryfikowano numerycznie ponad <span class="hl">10¹³</span> pierwszych zer
+          — wszystkie leżą dokładnie na linii Re(s) = ½. Jednak ogólny dowód pozostaje nieuchwytny.
+        </p>
+
+        <h3>Podejścia do dowodu</h3>
+        <p>
+          Wśród wielu prób wyróżniają się powiązania z:
+        </p>
+        <div class="math-block">• Teoria operatorów (hipoteza Hilberta–Pólyi: zera jako
+  wartości własne pewnego hermitowskiego operatora)
+
+• GUE conjecture (statystyka zer ≈ statystyka wartości
+  własnych losowych macierzy unitarnych)
+
+• Geometria algebraiczna (analogia z twierdzeniem Weila
+  o krzywych nad ciałami skończonymi)
+
+• Ukryta symetria (teorie reprezentacji, motywacje)</div>
+        <p>
+          Żadna z tych ścieżek nie doprowadziła do pełnego dowodu.
+        </p>
+      </div>
+
+      <!-- ── Dlaczego ważna ── -->
+      <div id="stab-why" class="stab-panel theory-section" style="display:none;">
+        <h3>Dlaczego Hipoteza Riemanna jest tak ważna?</h3>
+
+        <h3 style="margin-top:.9rem; font-size:1rem;">1. Rozkład liczb pierwszych</h3>
+        <p>
+          Najważniejsza konsekwencja: jeśli HR jest prawdziwa, to błąd szacowania
+          π(x) (liczby liczb pierwszych ≤ x) jest optymalny:
+        </p>
+        <div class="math-block">HR ⟹  π(x) = Li(x) + O(√x · ln x)
+
+gdzie  Li(x) = ∫₂ˣ dt/ln(t)  (całka logarytmiczna)</div>
+        <p>
+          Bez HR najlepszy znany wynik ma znacznie gorszy błąd.
+        </p>
+
+        <h3 style="font-size:1rem;">2. Twierdzenia warunkowe</h3>
+        <p>
+          Setki twierdzeń matematycznych ma postać <em class="em">„Jeśli HR, to…"</em>.
+          Udowodnienie HR zamieniłoby je natychmiast w bezwarunkowe fakty.
+          Wśród nich: rezultaty o stopniach wielomianów, dystrybucji reszt kwadratowych,
+          nierówności Linnika, i wiele innych.
+        </p>
+
+        <h3 style="font-size:1rem;">3. Kryptografia</h3>
+        <p>
+          Algorytmy kryptograficzne (RSA, ElGamal, ECC) opierają się na trudności faktoryzacji.
+          Rozkład liczb pierwszych bezpośrednio wpływa na ocenę ich bezpieczeństwa.
+          Głębsze zrozumienie ζ(s) mogłoby zmienić nasze pojmowanie trudności algorytmicznych.
+        </p>
+
+        <h3 style="font-size:1rem;">4. Powiązania z fizyką kwantową</h3>
+        <p>
+          Odkryto zadziwiającą statystyczną zgodność między odstępami zer ζ(s) a
+          <span class="hl">rozkładem wartości własnych losowych macierzy unitarnych (GUE)</span>,
+          podobnych do tych opisujących energie kwantowych układów chaotycznych.
+        </p>
+        <div class="math-block teal">Cytaty:
+
+Riemann (1859): "es ist sehr wahrscheinlich, daß alle Wurzeln reell sind"
+["jest bardzo prawdopodobne, że wszystkie pierwiastki są rzeczywiste"]
+
+David Hilbert (1900): Wymienił HR wśród 23 wielkich problemów matematyki.
+
+G.H. Hardy: "Gdybym miał obudzić się po pięciu wiekach, moim pierwszym
+pytaniem byłoby: czy udowodniono Hipotezę Riemanna?"</div>
+      </div>
+
+    </div>
+  </div><!-- /panel-theory -->
+
+</main>
+
+<!-- ═════════════════════════════════════════════ STOPKA -->
+<footer class="mt-12 border-t py-8 text-center"
+        style="border-color:var(--border); background:var(--bg2);">
+  <div class="max-w-7xl mx-auto px-5">
+    <p class="text-xs mb-4" style="color:var(--muted);">
+      Aplikacja edukacyjna o funkcji zeta Riemanna &nbsp;|&nbsp;
+      ζ(s) obliczane metodą szeregu eta Dirichleta z przyspieszeniem Eulera (N=80) &nbsp;|&nbsp;
+      Tailwind CSS · Chart.js 4.4 · Canvas API
+    </p>
+    <button class="btn-gold" onclick="downloadHTML()">
+      ⬇&nbsp; Pobierz cały kod jako plik HTML
+    </button>
+  </div>
+</footer>
+
+<!-- ░░░░░░░░░░░░░░░░░░░░░░░░░ JAVASCRIPT ░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════
+//  1. FUNKCJA ZETA RIEMANNA — obliczenia numeryczne
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Oblicza ζ(s) dla s = re + i·im
+ *
+ * Algorytm:
+ *   (a) Oblicz η(s) = Σ(-1)^{n-1}/n^s (szereg eta Dirichleta)
+ *       używając transformacji Eulera dla szybkiej zbieżności.
+ *   (b) ζ(s) = η(s) / (1 − 2^{1−s})
+ *
+ * Transformacja Eulera (N=80 poziomów) daje dokładność ~2^{-80}
+ * dla umiarkowanych |Im(s)|, wystarczającą do wizualizacji pierwszych
+ * kilkudziesięciu zer niebanalnch.
+ *
+ * @param {number} re  - Re(s)
+ * @param {number} im  - Im(s)
+ * @returns {{re: number, im: number}}
+ */
+function zetaComplex(re, im) {
+  const N = 80; // liczba poziomów transformacji Eulera
+
+  // ── (a) Szereg eta Dirichleta η(s) = Σ_{n=0}^∞ (-1)^n · a_n
+  //        gdzie a_n = 1/(n+1)^s
+  // Budujemy tablicę d[n] = [Re(a_n), Im(a_n)]
+  const d = new Array(N + 1);
+  for (let n = 0; n <= N; n++) {
+    const logn1 = Math.log(n + 1);          // ln(n+1)
+    const mag   = Math.exp(-re * logn1);    // (n+1)^{-σ}
+    const ang   = -im * logn1;              // faza
+    d[n] = [mag * Math.cos(ang), mag * Math.sin(ang)];
+  }
+
+  // Transformacja Eulera: η(s) ≈ Σ_{k=0}^N (1/2^{k+1}) · Δ^k a_0
+  // gdzie Δ^k jest k-tą różnicą wprzód (forward difference)
+  let etaRe = 0.0, etaIm = 0.0;
+  let pow2  = 0.5; // 1/2^{k+1}
+
+  for (let k = 0; k <= N; k++) {
+    // Δ^k a_0 jest aktualnie w d[0]
+    etaRe += pow2 * d[0][0];
+    etaIm += pow2 * d[0][1];
+    pow2  *= 0.5;
+
+    // Oblicz różnice wprzód in-place: d[j] ← d[j+1] − d[j]
+    for (let j = 0; j < N - k; j++) {
+      d[j][0] = d[j + 1][0] - d[j][0];
+      d[j][1] = d[j + 1][1] - d[j][1];
+    }
+  }
+
+  // ── (b) Mianownik: denom = 1 − 2^{1−s}
+  //   2^{1−s} = e^{(1−re)·ln2} · [cos(−im·ln2) + i·sin(−im·ln2)]
+  const e2 = Math.exp((1 - re) * Math.LN2);
+  const a2 = -im * Math.LN2;
+  const dRe = 1 - e2 * Math.cos(a2);
+  const dIm = -e2 * Math.sin(a2);
+
+  const dAbs2 = dRe * dRe + dIm * dIm;
+  // Ochrona przed biegunem przy s ≈ 1
+  if (dAbs2 < 1e-14) return { re: 1e10, im: 0 };
+
+  // ζ(s) = η(s) / denom  (dzielenie liczb zespolonych)
+  return {
+    re: (etaRe * dRe + etaIm * dIm) / dAbs2,
+    im: (etaIm * dRe - etaRe * dIm) / dAbs2
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  2. ZNANE ZERA NIEBANALNE
+// ═══════════════════════════════════════════════════════════════════
+
+/** Pierwsze 15 niebanalnch zer ζ(s) na linii krytycznej Re(s)=½ */
+const ZEROS = [
+  14.1347, 21.0220, 25.0109, 30.4249, 32.9351,
+  37.5862, 40.9187, 43.3271, 48.0052, 49.7738,
+  52.9703, 56.4462, 59.3470, 60.8318, 65.1125
+];
+
+// Wypełnij listę odznaki zer
+(function buildZerosList() {
+  const el = document.getElementById('zerosList');
+  ZEROS.forEach((t, i) => {
+    const b = document.createElement('span');
+    b.className = 'zero-badge';
+    b.title = `ρ${i+1} = ½ + ${t}·i`;
+    b.textContent = `ρ${i+1} ≈ ${t}`;
+    el.appendChild(b);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+//  3. OBLICZANIE DANYCH DLA WYKRESÓW
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Oblicza wartości ζ(½+it) dla t ∈ [0, maxT].
+ * @param {number} maxT        - górna granica t
+ * @param {number} numPts      - liczba punktów próbkowania
+ * @returns {{tVals, reVals, imVals, absVals}}
+ */
+function computeData(maxT, numPts = 500) {
+  const tVals = [], reVals = [], imVals = [], absVals = [];
+  for (let i = 0; i <= numPts; i++) {
+    const t = (i / numPts) * maxT;
+    const z = zetaComplex(0.5, t);
+    const a = Math.hypot(z.re, z.im);
+    tVals.push(t);
+    reVals.push(z.re);
+    imVals.push(z.im);
+    absVals.push(a);
+  }
+  return { tVals, reVals, imVals, absVals };
+}
+
+let currentMaxT = 70;
+let chartData   = null; // cache danych
+
+// ═══════════════════════════════════════════════════════════════════
+//  4. PLUGINY CHART.JS (niestandardowe rysowanie)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Plugin: pionowe przerywane linie w miejscach zer niebanalnch
+ */
+const zeroLinesPlugin = {
+  id: 'zeroLines',
+  afterDraw(chart) {
+    const { ctx, chartArea: ca, scales } = chart;
+    if (!scales.x || !ca) return;
+    const maxT = chart._zMaxT || 70;
+
+    ctx.save();
+    ctx.font = '10px IBM Plex Mono, monospace';
+
+    ZEROS.forEach((t, i) => {
+      if (t > maxT) return;
+      const x = scales.x.getPixelForValue(t);
+      if (x < ca.left - 2 || x > ca.right + 2) return;
+
+      // Przerywana fioletowa linia
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(176,132,255,0.4)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([3, 6]);
+      ctx.moveTo(x, ca.top);
+      ctx.lineTo(x, ca.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Etykieta ρₙ
+      ctx.fillStyle = 'rgba(176,132,255,0.7)';
+      ctx.fillText(`ρ${i+1}`, x + 2, ca.top + 11);
+    });
+
+    ctx.restore();
+  }
+};
+
+/**
+ * Plugin: złota linia kursora animacji przy bieżącym t
+ */
+const cursorPlugin = {
+  id: 'animCursor',
+  afterDraw(chart) {
+    if (animT <= 0) return;
+    const { ctx, chartArea: ca, scales } = chart;
+    if (!scales.x || !ca) return;
+
+    const x = scales.x.getPixelForValue(animT);
+    if (x < ca.left - 2 || x > ca.right + 2) return;
+
+    ctx.save();
+
+    // Pionowa złota linia
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(245,200,66,0.85)';
+    ctx.lineWidth   = 2;
+    ctx.moveTo(x, ca.top);
+    ctx.lineTo(x, ca.bottom);
+    ctx.stroke();
+
+    // Złota kropka na górze
+    ctx.beginPath();
+    ctx.arc(x, ca.top + 5, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5c842';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(245,200,66,0.3)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  5. INICJALIZACJA WYKRESÓW CHART.JS
+// ═══════════════════════════════════════════════════════════════════
+
+/** Wspólne opcje osi Chart.js */
+const AXIS_OPTS = {
+  x: {
+    type: 'linear',
+    title: { display: true, text: 't', color: '#6e8098', font: { family: 'IBM Plex Mono', size: 11 } },
+    ticks: { color: '#6e8098', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 14 },
+    grid:  { color: 'rgba(25,40,64,0.8)' }
+  },
+  y: {
+    ticks: { color: '#6e8098', font: { family: 'IBM Plex Mono', size: 9 } },
+    grid:  { color: 'rgba(25,40,64,0.8)' }
+  }
+};
+
+let mainChart, absChart;
+
+function initCharts() {
+  const TOOLTIP_STYLE = {
+    backgroundColor: '#0c1220',
+    borderColor: '#192840',
+    borderWidth: 1,
+    titleColor: '#6e8098',
+    bodyColor: '#dce4f0',
+    titleFont: { family: 'IBM Plex Mono' },
+    bodyFont:  { family: 'IBM Plex Mono' }
+  };
+
+  // ── Wykres 1: Re(ζ) i Im(ζ) ──
+  const ctxMain = document.getElementById('mainChart').getContext('2d');
+  mainChart = new Chart(ctxMain, {
+    type: 'line',
+    plugins: [zeroLinesPlugin, cursorPlugin],  // lokalne pluginy
+    data: {
+      datasets: [
+        {
+          label: 'Re(ζ)',
+          data: [],
+          borderColor: '#58a6ff',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'Im(ζ)',
+          data: [],
+          borderColor: '#ff6b9d',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false, ...TOOLTIP_STYLE }
+      },
+      scales: { ...AXIS_OPTS }
+    }
+  });
+  mainChart._zMaxT = currentMaxT;
+
+  // ── Wykres 2: |ζ| ──
+  const ctxAbs = document.getElementById('absChart').getContext('2d');
+  absChart = new Chart(ctxAbs, {
+    type: 'line',
+    plugins: [zeroLinesPlugin, cursorPlugin],
+    data: {
+      datasets: [
+        {
+          label: '|ζ|',
+          data: [],
+          borderColor: '#56cf9e',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: { target: 'origin', above: 'rgba(86,207,158,0.06)' }
+        }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false, ...TOOLTIP_STYLE }
+      },
+      scales: {
+        ...AXIS_OPTS,
+        y: { ...AXIS_OPTS.y, min: 0 }
+      }
+    }
+  });
+  absChart._zMaxT = currentMaxT;
+}
+
+/** Zaktualizuj oba wykresy dla nowego maxT */
+function updateCharts(maxT) {
+  currentMaxT = +maxT;
+  chartData   = computeData(currentMaxT);
+
+  // Konwertuj dane na format {x, y} dla Chart.js z liniową osią X
+  const mkPts = (arr) => chartData.tVals.map((t, i) => ({ x: t, y: arr[i] }));
+
+  mainChart._zMaxT = currentMaxT;
+  absChart._zMaxT  = currentMaxT;
+
+  mainChart.data.datasets[0].data = mkPts(chartData.reVals);
+  mainChart.data.datasets[1].data = mkPts(chartData.imVals);
+  mainChart.options.scales.x.max  = currentMaxT;
+  mainChart.update('none');
+
+  absChart.data.datasets[0].data = mkPts(chartData.absVals);
+  absChart.options.scales.x.max  = currentMaxT;
+  absChart.update('none');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  6. ANIMACJA — ruchomy kursor na wykresach
+// ═══════════════════════════════════════════════════════════════════
+
+let animT       = 0;       // bieżący czas animacji
+let isPlaying   = false;   // stan odtwarzania
+let animFrameId = null;    // ID pętli animacji
+const ANIM_DT   = 0.06;   // krok t na klatkę (~t/s przy 60fps)
+
+function togglePlay() {
+  if (isPlaying) pauseAnim();
+  else           startAnim();
+}
+
+function startAnim() {
+  if (animT >= currentMaxT) animT = 0; // auto-reset
+  isPlaying = true;
+  document.getElementById('playBtn').textContent = '⏸ Pauza';
+  animLoop();
+}
+
+function pauseAnim() {
+  isPlaying = false;
+  document.getElementById('playBtn').textContent = '▶ Animacja';
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+}
+
+function resetAnim() {
+  pauseAnim();
+  animT = 0;
+  updateAnimHUD(0, null);
+  mainChart.update('none');
+  absChart.update('none');
+}
+
+function animLoop() {
+  animT = Math.min(animT + ANIM_DT, currentMaxT);
+
+  // Oblicz ζ w bieżącym t i zaktualizuj HUD
+  const z = zetaComplex(0.5, animT);
+  updateAnimHUD(animT, z);
+
+  // Rysuj wykresy (pluginy narysują kursor)
+  mainChart.update('none');
+  absChart.update('none');
+
+  if (animT < currentMaxT && isPlaying) {
+    animFrameId = requestAnimationFrame(animLoop);
+  } else if (animT >= currentMaxT) {
+    pauseAnim();
+  }
+}
+
+function updateAnimHUD(t, z) {
+  document.getElementById('currentT').textContent = t.toFixed(3);
+  if (z) {
+    document.getElementById('dispReZ').textContent  = z.re.toFixed(5);
+    document.getElementById('dispImZ').textContent  = z.im.toFixed(5);
+    document.getElementById('dispAbsZ').textContent = Math.hypot(z.re, z.im).toFixed(5);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  7. OBSŁUGA SUWAKA I POLA WPISYWANIA (linia krytyczna)
+// ═══════════════════════════════════════════════════════════════════
+
+function onSliderChange(val) {
+  document.getElementById('maxTDisplay').textContent = val;
+  document.getElementById('maxTInput').value         = val;
+  updateCharts(+val);
+}
+
+function onInputChange(val) {
+  val = Math.max(50, Math.min(300, +val || 70));
+  document.getElementById('maxTSlider').value        = val;
+  document.getElementById('maxTDisplay').textContent = val;
+  updateCharts(val);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  8. SPIRALA — canvas animacja w płaszczyźnie zespolonej
+// ═══════════════════════════════════════════════════════════════════
+
+const spiralCanvas = document.getElementById('spiralCanvas');
+const sCtx         = spiralCanvas.getContext('2d');
+const SW = spiralCanvas.width, SH = spiralCanvas.height;
+const SCX = SW / 2, SCY = SH / 2; // środek canvas
+const SSCALE = 70;                 // piksele / jednostkę ζ
+
+let spiralT       = 0;
+let spiralMaxT    = 70;
+let spiralRunning = false;
+let spiralFID     = null;
+let spiralPath    = []; // tablica [re, im] odwiedzonych punktów
+
+function onSpiralMaxT(val) {
+  spiralMaxT = +val;
+  document.getElementById('spiralMaxTLabel').textContent = val;
+  resetSpiral();
+}
+
+function spiralDt() {
+  return +document.getElementById('spiralSpeed').value * 0.018;
+}
+
+function toggleSpiral() {
+  if (spiralRunning) {
+    spiralRunning = false;
+    document.getElementById('spiralPlayBtn').textContent = '▶ Start';
+    if (spiralFID) { cancelAnimationFrame(spiralFID); spiralFID = null; }
+  } else {
+    if (spiralT >= spiralMaxT) spiralT = 0, spiralPath = [];
+    spiralRunning = true;
+    document.getElementById('spiralPlayBtn').textContent = '⏸ Pause';
+    spiralLoop();
+  }
+}
+
+function resetSpiral() {
+  spiralRunning = false;
+  document.getElementById('spiralPlayBtn').textContent = '▶ Start';
+  if (spiralFID) { cancelAnimationFrame(spiralFID); spiralFID = null; }
+  spiralT = 0; spiralPath = [];
+  drawSpiral(null);
+}
+
+function spiralLoop() {
+  spiralT += spiralDt();
+  if (spiralT > spiralMaxT) {
+    spiralT = spiralMaxT;
+    spiralRunning = false;
+    document.getElementById('spiralPlayBtn').textContent = '▶ Start';
+  }
+
+  const z = zetaComplex(0.5, spiralT);
+  spiralPath.push([z.re, z.im]);
+
+  document.getElementById('spiralT').textContent = spiralT.toFixed(3);
+  document.getElementById('spiralX').textContent = z.re.toFixed(4);
+  document.getElementById('spiralY').textContent = z.im.toFixed(4);
+
+  drawSpiral(z);
+  if (spiralRunning) spiralFID = requestAnimationFrame(spiralLoop);
+}
+
+/** Rysuje klatkę spirali */
+function drawSpiral(currentZ) {
+  // Tło
+  sCtx.clearRect(0, 0, SW, SH);
+  sCtx.fillStyle = '#050810';
+  sCtx.fillRect(0, 0, SW, SH);
+
+  // Siatka
+  sCtx.strokeStyle = 'rgba(25,40,64,0.9)';
+  sCtx.lineWidth   = 1;
+  const step = SSCALE;
+  for (let x = SCX % step; x < SW; x += step) {
+    sCtx.beginPath(); sCtx.moveTo(x,0); sCtx.lineTo(x,SH); sCtx.stroke();
+  }
+  for (let y = SCY % step; y < SH; y += step) {
+    sCtx.beginPath(); sCtx.moveTo(0,y); sCtx.lineTo(SW,y); sCtx.stroke();
+  }
+
+  // Osie
+  sCtx.strokeStyle = 'rgba(110,128,152,0.5)';
+  sCtx.lineWidth   = 1.5;
+  sCtx.beginPath(); sCtx.moveTo(SCX,0); sCtx.lineTo(SCX,SH); sCtx.stroke();
+  sCtx.beginPath(); sCtx.moveTo(0,SCY); sCtx.lineTo(SW,SCY); sCtx.stroke();
+
+  // Etykiety osi
+  sCtx.fillStyle = 'rgba(110,128,152,0.6)';
+  sCtx.font      = '11px IBM Plex Mono, monospace';
+  sCtx.fillText('Re(ζ)', SW-46, SCY-7);
+  sCtx.fillText('Im(ζ)', SCX+5, 14);
+
+  // Punkt (0,0) — początekorigin
+  sCtx.beginPath();
+  sCtx.arc(SCX, SCY, 4, 0, Math.PI*2);
+  sCtx.fillStyle = 'rgba(110,128,152,0.4)';
+  sCtx.fill();
+
+  // Ślad spirali — kolorowanie zależne od t
+  if (spiralPath.length > 1) {
+    for (let i = 1; i < spiralPath.length; i++) {
+      const [x0, y0] = toSC(spiralPath[i-1]);
+      const [x1, y1] = toSC(spiralPath[i]);
+      const prog  = i / spiralPath.length;
+      const hue   = 180 + prog * 120; // niebiesko-fioletowy → teal
+      const alpha = 0.25 + 0.75 * prog;
+      sCtx.beginPath();
+      sCtx.strokeStyle = `hsla(${hue},75%,65%,${alpha})`;
+      sCtx.lineWidth   = 1.5;
+      sCtx.moveTo(x0, y0);
+      sCtx.lineTo(x1, y1);
+      sCtx.stroke();
+    }
+  }
+
+  // Bieżący punkt (złota kropka z aurą)
+  if (currentZ) {
+    const [px, py] = toSC([currentZ.re, currentZ.im]);
+    const dist = Math.hypot(currentZ.re, currentZ.im);
+
+    // Aurra świetlna
+    const grd = sCtx.createRadialGradient(px, py, 0, px, py, 20);
+    grd.addColorStop(0, 'rgba(245,200,66,0.6)');
+    grd.addColorStop(1, 'rgba(245,200,66,0)');
+    sCtx.beginPath();
+    sCtx.arc(px, py, 20, 0, Math.PI*2);
+    sCtx.fillStyle = grd;
+    sCtx.fill();
+
+    // Kropka
+    sCtx.beginPath();
+    sCtx.arc(px, py, 5, 0, Math.PI*2);
+    sCtx.fillStyle = '#f5c842';
+    sCtx.fill();
+
+    // Jeśli blisko zera — zielony "alarm"
+    if (dist < 0.18) {
+      sCtx.beginPath();
+      sCtx.arc(SCX, SCY, 14 + (0.18-dist)*60, 0, Math.PI*2);
+      sCtx.strokeStyle = `rgba(86,207,158,${0.9 - dist*4})`;
+      sCtx.lineWidth   = 2.5;
+      sCtx.stroke();
+    }
+  }
+}
+
+/** Przelicza (re, im) → (x, y) na canvas spirali */
+function toSC([re, im]) {
+  return [SCX + re * SSCALE, SCY - im * SSCALE];
+}
+
+// Rysuj pustą spiralę na starcie
+drawSpiral(null);
+
+// ═══════════════════════════════════════════════════════════════════
+//  9. KALKULATOR ζ(s)
+// ═══════════════════════════════════════════════════════════════════
+
+function setCalcAndRun(re, im) {
+  document.getElementById('calcRe').value = re;
+  document.getElementById('calcIm').value = im;
+  calculate();
+}
+
+function calculate() {
+  const re = +document.getElementById('calcRe').value;
+  const im = +document.getElementById('calcIm').value;
+  if (isNaN(re) || isNaN(im)) return;
+
+  const z    = zetaComplex(re, im);
+  const absZ = Math.hypot(z.re, z.im);
+
+  // Formatowanie liczby zespolonej
+  const fmtS = (r, i) => i >= 0
+    ? `${r.toFixed(4)} + ${i.toFixed(4)}i`
+    : `${r.toFixed(4)} − ${Math.abs(i).toFixed(4)}i`;
+
+  const fmtZ = (r, i) => i >= 0
+    ? `${r.toFixed(6)} + ${i.toFixed(6)}i`
+    : `${r.toFixed(6)} − ${Math.abs(i).toFixed(6)}i`;
+
+  // Wyświetl
+  document.getElementById('calcResult').style.display = 'block';
+  document.getElementById('resS').textContent    = fmtS(re, im);
+  document.getElementById('resZeta').textContent = fmtZ(z.re, z.im);
+  document.getElementById('resRe').textContent   = z.re.toFixed(6);
+  document.getElementById('resIm').textContent   = z.im.toFixed(6);
+  document.getElementById('resAbs').textContent  = absZ.toFixed(6);
+
+  // Adnotacja kontekstowa
+  let note = `arg(ζ) ≈ ${(Math.atan2(z.im, z.re) * 180 / Math.PI).toFixed(2)}°`;
+  if (absZ < 0.05 && re >= 0 && re <= 1) {
+    note = '⚡ Wygląda na zero niebanalne — |ζ(s)| ≈ 0 w paśmie krytycznym!';
+  } else if (Math.abs(re - 0.5) < 0.01 && im > 1) {
+    note += '  ·  Punkt na linii krytycznej Re(s) = ½';
+  } else if (re < -0.5 && Math.abs(im) < 0.01 && Math.abs(Math.round(re) - re) < 0.01) {
+    const rInt = Math.round(re);
+    if (rInt % 2 === 0) note = `Banalne zero ζ(${rInt}) = 0`;
+  } else if (Math.abs(re - 1) < 0.05 && Math.abs(im) < 0.05) {
+    note = '⚠ Pobliże bieguna (s ≈ 1) — wartość może być niedokładna.';
+  }
+  document.getElementById('resNote').textContent = note;
+
+  // Mini-płaszczyzna
+  drawComplexPlane(re, im, z.re, z.im);
+}
+
+// ── Mini-płaszczyzna zespolona ──
+const cpCanvas = document.getElementById('complexPlane');
+const cpCtx    = cpCanvas.getContext('2d');
+const CPW      = cpCanvas.width;
+const CPH      = cpCanvas.height;
+
+function drawComplexPlane(sRe, sIm, zRe, zIm) {
+  cpCtx.clearRect(0, 0, CPW, CPH);
+  cpCtx.fillStyle = '#050810';
+  cpCtx.fillRect(0, 0, CPW, CPH);
+
+  const cx = CPW * 0.4, cy = CPH * 0.5;
+  const sc = 50; // piksele/jednostkę
+
+  // Siatka
+  cpCtx.strokeStyle = 'rgba(25,40,64,0.9)';
+  cpCtx.lineWidth = 1;
+  for (let x = cx % sc; x < CPW; x += sc) { cpCtx.beginPath(); cpCtx.moveTo(x,0); cpCtx.lineTo(x,CPH); cpCtx.stroke(); }
+  for (let y = cy % sc; y < CPH; y += sc) { cpCtx.beginPath(); cpCtx.moveTo(0,y); cpCtx.lineTo(CPW,y); cpCtx.stroke(); }
+
+  // Osie
+  cpCtx.strokeStyle = 'rgba(110,128,152,0.5)';
+  cpCtx.lineWidth = 1.5;
+  cpCtx.beginPath(); cpCtx.moveTo(cx,0); cpCtx.lineTo(cx,CPH); cpCtx.stroke();
+  cpCtx.beginPath(); cpCtx.moveTo(0,cy); cpCtx.lineTo(CPW,cy); cpCtx.stroke();
+
+  // Pasmo krytyczne 0 < Re < 1
+  cpCtx.fillStyle = 'rgba(88,166,255,0.05)';
+  cpCtx.fillRect(cx, 0, sc, CPH);
+
+  // Linia krytyczna Re=0.5
+  cpCtx.strokeStyle = 'rgba(88,166,255,0.3)';
+  cpCtx.lineWidth = 1; cpCtx.setLineDash([4,4]);
+  cpCtx.beginPath(); cpCtx.moveTo(cx + 0.5*sc, 0); cpCtx.lineTo(cx + 0.5*sc, CPH); cpCtx.stroke();
+  cpCtx.setLineDash([]);
+
+  // Przerywana linia s → ζ(s)
+  const sx = cx + sRe * sc, sy = cy - sIm * sc;
+  const zx = cx + zRe * sc, zy = cy - zIm * sc;
+  cpCtx.strokeStyle = 'rgba(110,128,152,0.3)';
+  cpCtx.lineWidth = 1; cpCtx.setLineDash([3,5]);
+  cpCtx.beginPath(); cpCtx.moveTo(sx,sy); cpCtx.lineTo(zx,zy); cpCtx.stroke();
+  cpCtx.setLineDash([]);
+
+  // Punkt s (złoty)
+  cpCtx.beginPath(); cpCtx.arc(sx, sy, 6, 0, Math.PI*2);
+  cpCtx.fillStyle = '#f5c842'; cpCtx.fill();
+  cpCtx.strokeStyle = 'rgba(245,200,66,0.3)'; cpCtx.lineWidth = 8; cpCtx.stroke();
+  cpCtx.fillStyle = 'rgba(245,200,66,0.8)';
+  cpCtx.font = '11px IBM Plex Mono'; cpCtx.fillText('s', sx+9, sy-4);
+
+  // Punkt ζ(s) (zielony)
+  cpCtx.beginPath(); cpCtx.arc(zx, zy, 6, 0, Math.PI*2);
+  cpCtx.fillStyle = '#56cf9e'; cpCtx.fill();
+  cpCtx.strokeStyle = 'rgba(86,207,158,0.3)'; cpCtx.lineWidth = 8; cpCtx.stroke();
+  cpCtx.fillStyle = 'rgba(86,207,158,0.85)';
+  cpCtx.fillText('ζ(s)', zx+9, zy-4);
+
+  // Etykiety
+  cpCtx.fillStyle = 'rgba(110,128,152,0.5)'; cpCtx.font = '10px IBM Plex Mono';
+  cpCtx.fillText('Re', CPW-22, cy-5);
+  cpCtx.fillText('Im', cx+4, 13);
+  cpCtx.fillText('½', cx + 0.5*sc - 4, cy + 14);
+}
+
+// Wstępny rysunek płaszczyzny
+(function() {
+  const z0 = zetaComplex(0.5, 14.1347);
+  drawComplexPlane(0.5, 14.1347, z0.re, z0.im);
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+//  10. NAWIGACJA ZAKŁADKAMI
+// ═══════════════════════════════════════════════════════════════════
+
+const TAB_IDS = ['critical', 'spiral', 'calc', 'theory'];
+
+function switchTab(id, idx) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+
+// Sub-zakładki teorii
+function switchStab(id, btn) {
+  document.querySelectorAll('.stab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.stab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('stab-' + id).style.display = 'block';
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  11. POBIERANIE PLIKU HTML
+// ═══════════════════════════════════════════════════════════════════
+
+function downloadHTML() {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'zeta-riemann.html' });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  12. INICJALIZACJA PO ZAŁADOWANIU STRONY
+// ═══════════════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Wykresy
+  initCharts();
+  updateCharts(70);
+
+  // Oblicz i pokaż ρ₁ w kalkulatorze od razu
+  setTimeout(() => {
+    setCalcAndRun(0.5, 14.1347);
+  }, 100);
+});
+</script>
+</body>
+</html>
