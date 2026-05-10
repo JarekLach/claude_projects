@@ -4,7 +4,16 @@
       "Read(//c/Users/jarek/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/4a9c1314-01da-4c4c-9892-43dfad487feb/d99b4c53-8bde-4300-950b-9fac9bd5bb0b/skills/docx/**)",
       "Bash(npm list *)",
       "Bash(node -e \"require\\('docx'\\); console.log\\('docx available'\\)\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "mcp__pdf-viewer__display_pdf",
+      "mcp__PDF_Tools_-_View__Fill__Merge__Split__Manage_Pages__Extract__read_pdf_content",
+      "mcp__PDF_Tools_-_View__Fill__Merge__Split__Manage_Pages__Extract__get_pdf_info",
+      "mcp__PDF_Tools_-_View__Fill__Merge__Split__Manage_Pages__Extract__display_pdf",
+      "mcp__PDF_Tools_-_View__Fill__Merge__Split__Manage_Pages__Extract__get_page_analysis",
+      "Read(//mnt/c/Users/jarek/OneDrive/Claude_Projects/**)",
+      "Bash(pdftotext -f 28 -l 29 \"standard-terms-of-insurance.pdf\" -)",
+      "PowerShell(pip install pymupdf 2>&1)",
+      "Bash(dir \"C:/Users/jarek/OneDrive/Claude_Projects/BMW Versicherung/\" /OD)"
     ]
   }
 }

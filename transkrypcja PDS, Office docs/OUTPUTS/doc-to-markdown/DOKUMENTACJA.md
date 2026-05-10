@@ -26,6 +26,7 @@ Launcher `py` pozwala uruchamiać konkretną wersję: `py -3.12 skrypt.py`.
 Biblioteka i CLI Microsoftu do konwersji dokumentów biurowych i PDF do Markdown. Obsługuje najszerszy zakres formatów: PDF, DOCX, PPTX, XLSX, HTML, CSV, XML, JSON, TXT, RTF. Działa lokalnie, nie wymaga GPU. Ekstrakcja tekstu — nie OCR.
 
 Instalacja:
+
 ```
 pip install markitdown
 ```
@@ -35,6 +36,7 @@ pip install markitdown
 Biblioteka do wysokiej jakości ekstrakcji tekstu z PDF, zoptymalizowana pod kątem podawania wyników do modeli językowych. Lepiej niż MarkItDown zachowuje strukturę wielokolumnowych dokumentów technicznych. Tylko PDF. Nie OCR.
 
 Instalacja:
+
 ```
 pip install pymupdf4llm
 ```
@@ -44,6 +46,7 @@ pip install pymupdf4llm
 Klasyczny silnik OCR (open source, Apache 2.0). Obsługuje ponad 100 języków, w tym polski (pol), ukraiński (ukr), niemiecki (deu), angielski (eng), rumuński (ron). Szybki na CPU. Dobry dla czystych, jednokolumnowych skanów. Markdown wyjściowy to czysty tekst z podziałem na strony.
 
 Instalacja:
+
 ```
 winget install UB-Mannheim.TesseractOCR
 pip install pytesseract pymupdf pillow
@@ -56,6 +59,7 @@ Weryfikacja zainstalowanych języków: `tesseract --list-langs`
 Pipeline deep learning (surya-ocr + torch + transformers) do konwersji PDF do Markdown z zachowaniem pełnej struktury: tabele, nagłówki, układ wielokolumnowy. Znacznie lepsza jakość niż Tesseract przy złożonych layoutach. Wymaga Python 3.12. Na CPU Intel (bez NVIDIA CUDA) wolny — kilkadziesiąt sekund na stronę. Pobiera modele przy pierwszym uruchomieniu (~2–4 GB).
 
 Instalacja (Python 3.12):
+
 ```
 py -3.12 -m pip install marker-pdf
 ```
@@ -120,12 +124,12 @@ Przy pierwszym uruchomieniu pobiera modele (~2–4 GB) — raz, potem offline.
 
 ## Kiedy które narzędzie
 
-| Sytuacja | Narzędzie | Skrypt |
-|---|---|---|
-| Mix formatów (DOCX, XLSX, PPTX, PDF) | MarkItDown | mid.ps1 |
-| PDF techniczny, tabele, wiele kolumn | PyMuPDF4LLM | mupdf.ps1 |
-| Skan — prosty tekst, jedna kolumna | Tesseract OCR | ocr.ps1 |
-| Skan — tabele, złożony layout, jakość kluczowa | Marker | marker.ps1 |
+| Sytuacja                                       | Narzędzie     | Skrypt     |
+| ---------------------------------------------- | ------------- | ---------- |
+| Mix formatów (DOCX, XLSX, PPTX, PDF)           | MarkItDown    | mid.ps1    |
+| PDF techniczny, tabele, wiele kolumn           | PyMuPDF4LLM   | mupdf.ps1  |
+| Skan — prosty tekst, jedna kolumna             | Tesseract OCR | ocr.ps1    |
+| Skan — tabele, złożony layout, jakość kluczowa | Marker        | marker.ps1 |
 
 Żadne z narzędzi nie obsługuje OCR na odręcznym piśmie. Marker i Tesseract działają wyłącznie na plikach PDF.
 
@@ -140,3 +144,12 @@ Przy pierwszym uruchomieniu pobiera modele (~2–4 GB) — raz, potem offline.
 **Tesseract i PATH.** Instalator Windows często nie dodaje Tesseract do PATH automatycznie. Skrypt `ocr.ps1` szuka pod domyślną ścieżką `C:\Program Files\Tesseract-OCR\`. Jeśli instalacja niestandardowa — użyj parametru `-TesseractPath`.
 
 **Kodowanie skryptów.** Skrypty zapisane w UTF-8. Przy kopiowaniu między folderami przez Explorer lub niektóre edytory tekstu może dojść do zmiany kodowania i problemów z parserem PowerShell. W razie błędów parsera — skopiować plik ponownie bezpośrednio z folderu źródłowego lub użyć VS Code do weryfikacji kodowania.
+
+
+
+$$ sprawdzone marker bardzo dlugie OCR, duzo CPU ale wyokiej jakosci wynik
+
+MUPDF ani markitdown nie dały rady ze skanami faktur Amazon - dosyc wysokiej jakosci przeciez
+MARKITDOWN dobry do konwersji DOCX (xls?, pptx?)
+
+
